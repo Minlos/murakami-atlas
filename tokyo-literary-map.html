@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Tokyo Literary Map — an interactive map of places in the novels</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <style>
+    :root {
+      --ink: #efe6d6;
+      --muted: #9b917f;
+      --paper: #101218;
+      --panel: rgba(22, 25, 34, .92);
+      --line: #323848;
+      --accent: #d4b07a;
+    }
+    * { box-sizing: border-box; }
+    html, body { height: 100%; margin: 0; background: var(--paper); color: var(--ink);
+      font-family: Georgia, "Iowan Old Style", Palatino, serif; }
+    #map { position: absolute; inset: 0; }
+    .leaflet-container { background: #101218; font-family: inherit; }
+    .leaflet-tile-pane { filter: invert(1) hue-rotate(180deg) brightness(.92) contrast(.88) saturate(.3); }
+    .panel {
+      position: absolute; z-index: 500; top: 14px; left: 14px;
+      width: min(380px, calc(100vw - 28px));
+      background: var(--panel); backdrop-filter: blur(12px);
+      border: 1px solid var(--line); border-radius: 16px;
+      padding: 18px 18px 14px; box-shadow: 0 18px 50px rgba(0,0,0,.5);
+      max-height: calc(100vh - 28px); overflow: auto;
+    }
+    h1 { font-size: 1.28rem; font-weight: 600; margin: 0 2px 2px; letter-spacing: .01em; }
+    .atlas {
+      display: flex; flex-wrap: wrap; gap: 10px 14px;
+      margin: 0 2px 12px; font-size: .68rem; letter-spacing: .14em;
+      text-transform: uppercase;
+    }
+    .atlas a { color: var(--muted); text-decoration: none; }
+    .atlas a:hover, .atlas a.here { color: var(--accent); }
+    .sub { color: var(--muted); font-size: .8rem; line-height: 1.5; margin: 0 0 14px; }
+    label { display: block; font-size: .68rem; letter-spacing: .12em; text-transform: uppercase;
+      color: var(--muted); margin: 11px 0 5px; }
+    select, button {
+      width: 100%; background: #12141c; color: var(--ink); border: 1px solid var(--line);
+      border-radius: 8px; padding: 8px 10px; font: inherit; font-size: .86rem;
+    }
+    .row { display: flex; gap: 8px; margin-top: 10px; }
+    .row button { cursor: pointer; }
+    .row button:hover { border-color: var(--accent); color: var(--accent); }
+    .legend { display: flex; flex-wrap: wrap; gap: 8px 14px; margin-top: 12px; font-size: .75rem; color: var(--muted); }
+    .swatch { width: 9px; height: 9px; border-radius: 50%; display: inline-block; margin-right: 5px; vertical-align: middle; }
+    .otherworld {
+      margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--line);
+      font-size: .8rem; color: var(--muted); line-height: 1.5;
+    }
+    .otherworld strong { color: var(--accent); font-weight: 600; }
+    .count { color: var(--accent); font-variant-numeric: tabular-nums; }
+    .leaflet-popup-content-wrapper {
+      background: #1a1d27; color: var(--ink); border-radius: 12px;
+      border: 1px solid var(--line); box-shadow: 0 10px 28px rgba(0,0,0,.45);
+    }
+    .leaflet-popup-tip { background: #1a1d27; }
+    .leaflet-popup-content { margin: 13px 15px; font-size: .9rem; line-height: 1.45; }
+    .popup-kicker { font-size: .68rem; letter-spacing: .1em; text-transform: uppercase; color: var(--accent); margin: 0 0 5px; }
+    .popup-title { font-size: 1.08rem; margin: 0 0 2px; }
+    .popup-ja { color: var(--muted); font-size: .8rem; margin: 0 0 8px; }
+    .popup-note { color: #d8d0c2; margin: 0; }
+    .leaflet-control-attribution { background: rgba(16,18,24,.75) !important; color: #6e675c !important; }
+    .leaflet-control-attribution a { color: #8e8576 !important; }
+    @media (max-width: 640px) {
+      .panel { top: auto; bottom: 10px; left: 10px; right: 10px; width: auto; max-height: 46vh; }
+    }
+  </style>
+</head>
+<body>
+  <div id="map"></div>
+  <aside class="panel">
+    <nav class="atlas">
+      <a href="murakami-map.html">Murakami</a>
+      <a class="here" href="tokyo-literary-map.html">Tokyo</a>
+      <a href="barcelona-literary-map.html">Barcelona</a>
+    </nav>
+    <h1>Tokyo Literary Map</h1>
+    <p class="sub"><span class="count" id="count"></span> places from the novels. Filter by book. Interiors and vanished quarters stay off the pins on purpose.</p>
+    <label for="work">Book</label>
+    <select id="work"></select>
+    <label for="reality">How real</label>
+    <select id="reality">
+      <option value="all">All mappable places</option>
+      <option value="real">Named real places</option>
+      <option value="inspired_by">Inspired by a real town</option>
+      <option value="neighborhood_only">Neighborhood / schematic</option>
+      <option value="memory">Memory, war, or story-only</option>
+    </select>
+    <div class="row">
+      <button type="button" id="yamanote">Yamanote</button>
+      <button type="button" id="tokyo">Tokyo</button>
+      <button type="button" id="kanto">Kantō</button>
+    </div>
+    <div class="legend">
+      <span><i class="swatch" style="background:#d4b483"></i>real</span>
+      <span><i class="swatch" style="background:#7eb8a8"></i>inspired by</span>
+      <span><i class="swatch" style="background:#8aa0c4"></i>neighborhood</span>
+      <span><i class="swatch" style="background:#c4898a"></i>memory</span>
+    </div>
+    <div class="otherworld">
+      <strong>Unmapped on purpose.</strong> The Yoshiwara of Takekurabe as it stood; the boarding rooms of No Longer Human; the well in The Wind-Up Bird Chronicle. A coordinate would be a lie.
+    </div>
+  </aside>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script>
+    const PLACES = [
+      {name:"Hongō / University of Tokyo", ja:"本郷・東京大学", works:["Kokoro","Sanshirō"], year:1914, reality:"real", lat:35.7128, lng:139.7620, note:"Soseki’s campus city. Sanshirō arrives here; Kokoro’s sensei lives in the intellectual west of the old city."},
+      {name:"Waseda", ja:"早稲田", works:["Kokoro","Norwegian Wood"], year:1914, reality:"real", lat:35.7090, lng:139.7195, note:"Soseki taught here. A later student Tokyo still uses the same slope."},
+      {name:"Jimbocho", ja:"神保町", works:["I Am a Cat"], year:1905, reality:"real", lat:35.6956, lng:139.7578, note:"The used-book district. Soseki’s Meiji city already knew these shelves; they are still the city’s reading room."},
+      {name:"Asakusa", ja:"浅草", works:["The Scarlet Gang of Asakusa","A Strange Tale from East of the River"], year:1930, reality:"real", lat:35.7148, lng:139.7967, note:"Kawabata’s 1930s honky-tonk and Kafu’s east-of-the-river walks. The temple and the lights are both real."},
+      {name:"Yoshiwara", ja:"吉原", works:["Takekurabe"], year:1895, reality:"memory", lat:35.7240, lng:139.7945, note:"Higuchi Ichiyo’s quarter. The pleasure district is gone; the memorial and the grid remain."},
+      {name:"Yanaka / Nezu / Sendagi", ja:"谷根千", works:["I Am a Cat"], year:1905, reality:"neighborhood_only", lat:35.7278, lng:139.7661, note:"The low-city slopes Soseki lived on. A neighborhood more than a single door."},
+      {name:"Tabata", ja:"田端", works:["Rashomon"], year:1915, reality:"real", lat:35.7378, lng:139.7610, note:"Akutagawa’s house in the north of the Yamanote. The I-novel’s Tokyo has a specific hill."},
+      {name:"Kagurazaka", ja:"神楽坂", works:["The River Sumida"], year:1909, reality:"real", lat:35.7022, lng:139.7405, note:"Geisha slope on the outer moat. Kafu’s Tokyo of hills and lanterns, west of the river he later crossed."},
+      {name:"Ginza", ja:"銀座", works:["Naomi","Confessions of a Mask"], year:1924, reality:"real", lat:35.6717, lng:139.7649, note:"Tanizaki’s modern girl and Mishima’s postwar boulevard. The city’s display window."},
+      {name:"Ichigaya", ja:"市谷", works:["Runaway Horses"], year:1969, reality:"real", lat:35.6938, lng:139.7310, note:"The military district. Mishima’s late novels and his last morning share this address."},
+      {name:"Fukagawa", ja:"深川", works:["A Strange Tale from East of the River"], year:1937, reality:"neighborhood_only", lat:35.6800, lng:139.7980, note:"Kafu’s east-of-the-river Tokyo. Tamanoi and the creeks, now filled, still name a mood."},
+      {name:"Tamanoi", ja:"玉ノ井", works:["A Strange Tale from East of the River"], year:1937, reality:"memory", lat:35.7105, lng:139.8190, note:"The unlicensed quarter Kafu walked. The canals were filled; the station name is the remainder."},
+      {name:"Ueno", ja:"上野", works:["The Scarlet Gang of Asakusa","Kitchen"], year:1930, reality:"real", lat:35.7142, lng:139.7731, note:"Park, station, and the city’s northern gate. Kawabata’s Asakusa crowd and later kitchen-table Tokyo both pass through."},
+      {name:"Nihonbashi", ja:"日本橋", works:["I Am a Cat"], year:1905, reality:"real", lat:35.6833, lng:139.7744, note:"The old merchant zero-mile. Meiji novels still treat it as the center even as the center moves west."},
+      {name:"Kichijoji / Inokashira", ja:"吉祥寺・井の頭", works:["Norwegian Wood","Kitchen"], year:1987, reality:"real", lat:35.7001, lng:139.5763, note:"Western-park Tokyo. Murakami’s Toru and Yoshimoto’s found families share the same green."},
+      {name:"Shimokitazawa", ja:"下北沢", works:["Kitchen"], year:1988, reality:"neighborhood_only", lat:35.6617, lng:139.6678, note:"Banana Yoshimoto’s west-Tokyo rooms. A schematic of shared flats and night kitchens, not a single building."},
+      {name:"Shinjuku Golden Gai", ja:"新宿ゴールデン街", works:["Almost Transparent Blue"], year:1976, reality:"real", lat:35.6938, lng:139.7046, note:"The bar warren. Ryu Murakami’s 1970s night and the later city still drink in the same alleys."},
+      {name:"Aoyama Cemetery", ja:"青山霊園", works:["Kokoro"], year:1914, reality:"real", lat:35.6658, lng:139.7222, note:"Soseki’s city of the dead inside the living one. A public cemetery that novels keep using as a quiet room."},
+      {name:"Meiji Gakuin", ja:"明治学院", works:["The Broken Commandment"], year:1906, reality:"real", lat:35.6378, lng:139.7310, note:"Shimazaki Toson’s school in Shirokane. Protestant Tokyo before the I-novel moved north to Hongō."},
+      {name:"Dangozaka", ja:"団子坂", works:["Sanshirō"], year:1908, reality:"real", lat:35.7170, lng:139.7605, note:"The Hongō slope in Soseki. Students still walk it; the novel already knew the grade."},
+      {name:"Ryogoku / Sumida", ja:"両国・隅田", works:["The Scarlet Gang of Asakusa"], year:1930, reality:"real", lat:35.6965, lng:139.7930, note:"River Tokyo. Kawabata’s crowd crosses the Sumida as a fact, not a symbol."},
+      {name:"Kamakura", ja:"鎌倉", works:["The Sound of the Mountain","Kokoro"], year:1949, reality:"real", lat:35.3192, lng:139.5467, note:"Kawabata’s late house and Soseki’s seaside chapters. Tokyo’s literary suburb to the south."},
+      {name:"Mitaka / Tamagawa", ja:"三鷹・玉川上水", works:["No Longer Human"], year:1948, reality:"inspired_by", lat:35.6833, lng:139.5600, note:"Dazai died in the Tamagawa Josui. The novel’s interiors are not this water; the water is what the life left."},
+      {name:"Magome, Setagaya", ja:"馬込", works:["Confessions of a Mask"], year:1949, reality:"neighborhood_only", lat:35.6300, lng:139.6700, note:"Mishima’s childhood west. A suburban schematic more than a pilgrimage door."},
+      {name:"Tsukiji", ja:"築地", works:["The Gourmet Club"], year:1919, reality:"real", lat:35.6654, lng:139.7707, note:"Tanizaki’s appetite and the old market. The market has moved; the district name is the remainder."},
+      {name:"Ochanomizu", ja:"御茶ノ水", works:["Sanshirō"], year:1908, reality:"real", lat:35.6995, lng:139.7650, note:"The student ravine between Kanda and Hongō. Soseki’s young men already change trains in this cut."},
+      {name:"Sendagaya", ja:"千駄ヶ谷", works:["Dance Dance Dance"], year:1988, reality:"real", lat:35.6814, lng:139.7112, note:"Where Murakami ran Peter Cat. A real jazz-bar Tokyo, one block off the park."},
+      {name:"Koishikawa", ja:"小石川", works:["I Am a Cat"], year:1905, reality:"neighborhood_only", lat:35.7054, lng:139.7494, note:"Soseki’s cat narrates a Bunkyo house. The garden is real; the household is a device."}
+    ];
+
+    const COLORS = {
+      real: "#d4b483",
+      inspired_by: "#7eb8a8",
+      neighborhood_only: "#8aa0c4",
+      memory: "#c4898a"
+    };
+
+    const map = L.map("map", { zoomControl: true, minZoom: 2 }).setView([35.68, 139.75], 12);
+    L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      attribution: "&copy; OpenStreetMap",
+      maxZoom: 19
+    }).addTo(map);
+
+    const allWorks = [...new Set(PLACES.flatMap(p => p.works))].sort();
+    const workSelect = document.getElementById("work");
+    workSelect.innerHTML = '<option value="all">All books in this atlas</option>' +
+      allWorks.map(w => '<option value="' + w.replace(/"/g, "&quot;") + '">' + w + "</option>").join("");
+
+    const layer = L.layerGroup().addTo(map);
+
+    function render() {
+      layer.clearLayers();
+      const work = workSelect.value;
+      const reality = document.getElementById("reality").value;
+      const shown = PLACES.filter(p => {
+        if (work !== "all" && p.works.indexOf(work) === -1) return false;
+        if (reality !== "all" && p.reality !== reality) return false;
+        return true;
+      });
+      document.getElementById("count").textContent = shown.length;
+      shown.forEach(p => {
+        const m = L.circleMarker([p.lat, p.lng], {
+          radius: 8,
+          color: "#0b0c10",
+          weight: 1,
+          fillColor: COLORS[p.reality] || "#d4b483",
+          fillOpacity: 0.95
+        });
+        m.bindPopup(
+          '<p class="popup-kicker">' + p.works.join(" · ") + "</p>" +
+          '<p class="popup-title">' + p.name + "</p>" +
+          '<p class="popup-ja">' + p.ja + " · " + p.reality.replace(/_/g, " ") + "</p>" +
+          '<p class="popup-note">' + p.note + "</p>"
+        );
+        m.addTo(layer);
+      });
+    }
+
+    workSelect.addEventListener("change", render);
+    document.getElementById("reality").addEventListener("change", render);
+    document.getElementById("yamanote").onclick = function () { map.setView([35.681, 139.767], 13); };
+    document.getElementById("tokyo").onclick = function () { map.setView([35.68, 139.70], 11); };
+    document.getElementById("kanto").onclick = function () { map.fitBounds([[35.28, 139.50], [35.78, 139.90]]); };
+    render();
+  </script>
+</body>
+</html>

@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Barcelona Literary Map — an interactive map of places in the novels</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <style>
+    :root {
+      --ink: #efe6d6;
+      --muted: #9b917f;
+      --paper: #101218;
+      --panel: rgba(22, 25, 34, .92);
+      --line: #323848;
+      --accent: #d4b07a;
+    }
+    * { box-sizing: border-box; }
+    html, body { height: 100%; margin: 0; background: var(--paper); color: var(--ink);
+      font-family: Georgia, "Iowan Old Style", Palatino, serif; }
+    #map { position: absolute; inset: 0; }
+    .leaflet-container { background: #101218; font-family: inherit; }
+    .leaflet-tile-pane { filter: invert(1) hue-rotate(180deg) brightness(.92) contrast(.88) saturate(.3); }
+    .panel {
+      position: absolute; z-index: 500; top: 14px; left: 14px;
+      width: min(380px, calc(100vw - 28px));
+      background: var(--panel); backdrop-filter: blur(12px);
+      border: 1px solid var(--line); border-radius: 16px;
+      padding: 18px 18px 14px; box-shadow: 0 18px 50px rgba(0,0,0,.5);
+      max-height: calc(100vh - 28px); overflow: auto;
+    }
+    h1 { font-size: 1.28rem; font-weight: 600; margin: 0 2px 2px; letter-spacing: .01em; }
+    .atlas {
+      display: flex; flex-wrap: wrap; gap: 10px 14px;
+      margin: 0 2px 12px; font-size: .68rem; letter-spacing: .14em;
+      text-transform: uppercase;
+    }
+    .atlas a { color: var(--muted); text-decoration: none; }
+    .atlas a:hover, .atlas a.here { color: var(--accent); }
+    .sub { color: var(--muted); font-size: .8rem; line-height: 1.5; margin: 0 0 14px; }
+    label { display: block; font-size: .68rem; letter-spacing: .12em; text-transform: uppercase;
+      color: var(--muted); margin: 11px 0 5px; }
+    select, button {
+      width: 100%; background: #12141c; color: var(--ink); border: 1px solid var(--line);
+      border-radius: 8px; padding: 8px 10px; font: inherit; font-size: .86rem;
+    }
+    .row { display: flex; gap: 8px; margin-top: 10px; }
+    .row button { cursor: pointer; }
+    .row button:hover { border-color: var(--accent); color: var(--accent); }
+    .legend { display: flex; flex-wrap: wrap; gap: 8px 14px; margin-top: 12px; font-size: .75rem; color: var(--muted); }
+    .swatch { width: 9px; height: 9px; border-radius: 50%; display: inline-block; margin-right: 5px; vertical-align: middle; }
+    .otherworld {
+      margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--line);
+      font-size: .8rem; color: var(--muted); line-height: 1.5;
+    }
+    .otherworld strong { color: var(--accent); font-weight: 600; }
+    .count { color: var(--accent); font-variant-numeric: tabular-nums; }
+    .leaflet-popup-content-wrapper {
+      background: #1a1d27; color: var(--ink); border-radius: 12px;
+      border: 1px solid var(--line); box-shadow: 0 10px 28px rgba(0,0,0,.45);
+    }
+    .leaflet-popup-tip { background: #1a1d27; }
+    .leaflet-popup-content { margin: 13px 15px; font-size: .9rem; line-height: 1.45; }
+    .popup-kicker { font-size: .68rem; letter-spacing: .1em; text-transform: uppercase; color: var(--accent); margin: 0 0 5px; }
+    .popup-title { font-size: 1.08rem; margin: 0 0 2px; }
+    .popup-ja { color: var(--muted); font-size: .8rem; margin: 0 0 8px; }
+    .popup-note { color: #d8d0c2; margin: 0; }
+    .leaflet-control-attribution { background: rgba(16,18,24,.75) !important; color: #6e675c !important; }
+    .leaflet-control-attribution a { color: #8e8576 !important; }
+    @media (max-width: 640px) {
+      .panel { top: auto; bottom: 10px; left: 10px; right: 10px; width: auto; max-height: 46vh; }
+    }
+  </style>
+</head>
+<body>
+  <div id="map"></div>
+  <aside class="panel">
+    <nav class="atlas">
+      <a href="murakami-map.html">Murakami</a>
+      <a href="tokyo-literary-map.html">Tokyo</a>
+      <a class="here" href="barcelona-literary-map.html">Barcelona</a>
+    </nav>
+    <h1>Barcelona Literary Map</h1>
+    <p class="sub"><span class="count" id="count"></span> places from the novels. Filter by book. The Cemetery of Forgotten Books stays off the pins on purpose.</p>
+    <label for="work">Book</label>
+    <select id="work"></select>
+    <label for="reality">How real</label>
+    <select id="reality">
+      <option value="all">All mappable places</option>
+      <option value="real">Named real places</option>
+      <option value="inspired_by">Inspired by a real town</option>
+      <option value="neighborhood_only">Neighborhood / schematic</option>
+      <option value="memory">Memory, war, or story-only</option>
+    </select>
+    <div class="row">
+      <button type="button" id="oldcity">Ciutat Vella</button>
+      <button type="button" id="city">Barcelona</button>
+      <button type="button" id="catalunya">Catalunya</button>
+    </div>
+    <div class="legend">
+      <span><i class="swatch" style="background:#d4b483"></i>real</span>
+      <span><i class="swatch" style="background:#7eb8a8"></i>inspired by</span>
+      <span><i class="swatch" style="background:#8aa0c4"></i>neighborhood</span>
+      <span><i class="swatch" style="background:#c4898a"></i>memory</span>
+    </div>
+    <div class="otherworld">
+      <strong>Unmapped on purpose.</strong> The Cemetery of Forgotten Books; Daniel’s house as a street number; the boarding house in Nada as a doorbell. A coordinate would be a lie.
+    </div>
+  </aside>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script>
+    const PLACES = [
+      {name:"Plaça del Diamant", ca:"Plaça del Diamant, Gràcia", works:["In Diamond Square"], year:1962, reality:"real", lat:41.4035, lng:2.1565, note:"Mercè Rodoreda’s plaza. Natalia’s Gràcia is this square, still there under the same name."},
+      {name:"Santa Maria del Mar", ca:"Santa Maria del Mar", works:["Cathedral of the Sea","The Shadow of the Wind"], year:2006, reality:"real", lat:41.3839, lng:2.1821, note:"Falcones’s 14th-century church in El Born. Zafón’s walkers pass it on the way into the old city."},
+      {name:"Carrer de Santa Anna", ca:"Carrer de Santa Anna", works:["The Shadow of the Wind"], year:2001, reality:"inspired_by", lat:41.3854, lng:2.1718, note:"Sempere & Sons is invented. Readers put the bookshop on this street of old shops between the Rambla and Portal de l’Àngel."},
+      {name:"Barri Gòtic", ca:"Barri Gòtic", works:["Nada"], year:1945, reality:"neighborhood_only", lat:41.3833, lng:2.1761, note:"Carmen Laforet’s decaying bourgeois house is a Gothic-quarter atmosphere, not a doorbell you can ring."},
+      {name:"Hotel Continental", ca:"Hotel Continental, La Rambla", works:["Homage to Catalonia"], year:1938, reality:"real", lat:41.3855, lng:2.1703, note:"Orwell’s first Barcelona hotel, still on the Rambla. The city as a revolutionary festival, then as a police problem."},
+      {name:"Plaça del Pi / Hotel Falcón", ca:"Plaça del Pi", works:["Homage to Catalonia"], year:1938, reality:"real", lat:41.3824, lng:2.1744, note:"POUM headquarters in the Hotel Falcón, off the Rambla. The May Days start as street rumor and become rifle fire."},
+      {name:"Plaça Reial", ca:"Plaça Reial", works:["The Southern Seas","The City of Marvels"], year:1979, reality:"real", lat:41.3802, lng:2.1754, note:"Arcaded square off the Rambla. Carvalho’s Barcelona and Mendoza’s boom-city both use it as a public room."},
+      {name:"Bar Marsella", ca:"Bar Marsella, Sant Pau", works:["The Thief's Journal","Carvalho"], year:1949, reality:"real", lat:41.3785, lng:2.1709, note:"Absinthe bar in the Raval, open since 1820. Genet’s underworld and Montalbán’s detective both drink in this neighborhood."},
+      {name:"El Raval", ca:"El Raval / Barri Xinès", works:["Carvalho","The Thief's Journal"], year:1974, reality:"neighborhood_only", lat:41.3798, lng:2.1695, note:"The old Barrio Chino. Montalbán’s Carvalho cooks and walks here; Genet’s Barcelona is the same streets at night."},
+      {name:"Els Quatre Gats", ca:"Els 4 Gats, Montsió", works:["L'auca del senyor Esteve"], year:1907, reality:"real", lat:41.3857, lng:2.1736, note:"Modernista café of Rusiñol, Casas, and the young Picasso. A real address that still serves as a literary landmark."},
+      {name:"Ateneu Barcelonès", ca:"Ateneu Barcelonès", works:["The Time of the Cherries"], year:1977, reality:"real", lat:41.3848, lng:2.1730, note:"The city’s writers’ club on Carrer de la Canuda. Reading rooms, a garden, and a century of Catalan argument."},
+      {name:"Palau de la Música Catalana", ca:"Palau de la Música", works:["The City of Marvels"], year:1986, reality:"real", lat:41.3875, lng:2.1752, note:"Domènech i Montaner’s concert hall. Mendoza’s expanding city needs a palace for music as much as for trade."},
+      {name:"Teatre del Liceu", ca:"Gran Teatre del Liceu", works:["The City of Marvels"], year:1861, reality:"real", lat:41.3802, lng:2.1733, note:"The Rambla opera house. Bourgeois Barcelona on fire, then rebuilt — a plot Mendoza’s city already knows."},
+      {name:"El Carmel", ca:"El Carmel / Turó de la Rovira", works:["Last Evenings with Teresa"], year:1966, reality:"neighborhood_only", lat:41.4192, lng:2.1556, note:"Juan Marsé’s Pijoaparte comes down from the Carmel shacks toward a Teresa who lives on the other slope of class."},
+      {name:"Vallvidrera", ca:"Vallvidrera", works:["The Southern Seas"], year:1979, reality:"real", lat:41.4120, lng:2.1067, note:"Pepe Carvalho’s house above the city. Montalbán put the detective on the ridge so Barcelona could be looked at, not only walked."},
+      {name:"Tibidabo", ca:"Tibidabo", works:["The Southern Seas","Homage to Barcelona"], year:1979, reality:"real", lat:41.4225, lng:2.1186, note:"The mountain and the old amusement park. A viewing terrace for Carvalho, and for Tóibín’s essays on the city."},
+      {name:"Montjuïc", ca:"Montjuïc", works:["Homage to Catalonia"], year:1938, reality:"memory", lat:41.3633, lng:2.1650, note:"Castle, cemetery, and the 1930s city looking up. Orwell’s Barcelona has this hill as a military fact."},
+      {name:"Barceloneta beach", ca:"Platja de la Barceloneta", works:["Don Quixote"], year:1615, reality:"real", lat:41.3766, lng:2.1924, note:"Part II: Quixote reaches the sea at Barcelona, sees a printing house, and fights on the sand. The first literary Barcelona."},
+      {name:"Parc de la Ciutadella", ca:"Parc de la Ciutadella", works:["The City of Marvels"], year:1888, reality:"real", lat:41.3884, lng:2.1874, note:"The 1888 Universal Exhibition grounds. Mendoza’s Onofre Bouvila makes himself in this boom."},
+      {name:"Fossar de les Moreres", ca:"Fossar de les Moreres", works:["Cathedral of the Sea"], year:2006, reality:"real", lat:41.3836, lng:2.1823, note:"The burial ground beside Santa Maria del Mar. Falcones’s 1714 city and the present square share the same stones."},
+      {name:"Labyrinth of Horta", ca:"Parc del Laberint d'Horta", works:["Homage to Barcelona"], year:1990, reality:"real", lat:41.4380, lng:2.1554, note:"Neoclassical hedge maze in Horta. A public garden the city’s essays walk; not a plot engine, a real room."},
+      {name:"Parc Güell", ca:"Parc Güell", works:["Homage to Barcelona"], year:1990, reality:"real", lat:41.4145, lng:2.1527, note:"Gaudí’s park above Gràcia. Tóibín’s city essays treat it as a public room, not a postcard."},
+      {name:"Mercat de Sant Antoni", ca:"Mercat de Sant Antoni", works:["The Shadow of the Wind"], year:2001, reality:"real", lat:41.3789, lng:2.1627, note:"Sunday book market on the Eixample edge. Zafón’s Barcelona is a city that still sells forgotten books in daylight."},
+      {name:"Passeig de Gràcia", ca:"Passeig de Gràcia", works:["The City of Marvels"], year:1986, reality:"real", lat:41.3917, lng:2.1649, note:"The new-money avenue of the Eixample. Mendoza’s 1880s boom is this street before the tourists."},
+      {name:"Plaça de Sant Felip Neri", ca:"Plaça de Sant Felip Neri", works:["Homage to Catalonia"], year:1938, reality:"memory", lat:41.3834, lng:2.1751, note:"Baroque square pocked by Civil War shrapnel. The novel does not name the stones; the stones remember the novel’s year."},
+      {name:"Palau Güell", ca:"Palau Güell", works:["The City of Marvels"], year:1888, reality:"real", lat:41.3789, lng:2.1742, note:"Gaudí’s early palace on Nou de la Rambla, looking into the Raval. Private money at the edge of the old vice district."},
+      {name:"Sagrada Família", ca:"Sagrada Família", works:["Homage to Barcelona"], year:1990, reality:"real", lat:41.4036, lng:2.1744, note:"The unfinished church as skyline. More a fact the novels walk under than a plot engine."},
+      {name:"Pedralbes Monastery", ca:"Reial Monestir de Santa Maria de Pedralbes", works:["The City of Marvels"], year:1986, reality:"real", lat:41.3956, lng:2.1125, note:"Gothic monastery at the rich edge of the city. Mendoza’s Barcelona has a western hill as well as a port."},
+      {name:"Sitges", ca:"Sitges", works:["The South","Homage to Barcelona"], year:1990, reality:"real", lat:41.2372, lng:1.8059, note:"Colm Tóibín’s Catalan coast. A real town south of the city, used as a room Barcelona rents for the weekend."},
+      {name:"Blanes", ca:"Blanes", works:["The Skating Rink"], year:1993, reality:"inspired_by", lat:41.6742, lng:2.7904, note:"Bolaño lived here. The Skating Rink’s Costa Brava town is a schematic of this fishing-and-holiday shore."}
+    ];
+
+    const COLORS = {
+      real: "#d4b483",
+      inspired_by: "#7eb8a8",
+      neighborhood_only: "#8aa0c4",
+      memory: "#c4898a"
+    };
+
+    const map = L.map("map", { zoomControl: true, minZoom: 2 }).setView([41.387, 2.170], 13);
+    L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      attribution: "&copy; OpenStreetMap",
+      maxZoom: 19
+    }).addTo(map);
+
+    const allWorks = [...new Set(PLACES.flatMap(p => p.works))].sort();
+    const workSelect = document.getElementById("work");
+    workSelect.innerHTML = '<option value="all">All books in this atlas</option>' +
+      allWorks.map(w => '<option value="' + w.replace(/"/g, "&quot;") + '">' + w + "</option>").join("");
+
+    const layer = L.layerGroup().addTo(map);
+
+    function render() {
+      layer.clearLayers();
+      const work = workSelect.value;
+      const reality = document.getElementById("reality").value;
+      const shown = PLACES.filter(p => {
+        if (work !== "all" && p.works.indexOf(work) === -1) return false;
+        if (reality !== "all" && p.reality !== reality) return false;
+        return true;
+      });
+      document.getElementById("count").textContent = shown.length;
+      shown.forEach(p => {
+        const m = L.circleMarker([p.lat, p.lng], {
+          radius: 8,
+          color: "#0b0c10",
+          weight: 1,
+          fillColor: COLORS[p.reality] || "#d4b483",
+          fillOpacity: 0.95
+        });
+        m.bindPopup(
+          '<p class="popup-kicker">' + p.works.join(" · ") + "</p>" +
+          '<p class="popup-title">' + p.name + "</p>" +
+          '<p class="popup-ja">' + p.ca + " · " + p.reality.replace(/_/g, " ") + "</p>" +
+          '<p class="popup-note">' + p.note + "</p>"
+        );
+        m.addTo(layer);
+      });
+    }
+
+    workSelect.addEventListener("change", render);
+    document.getElementById("reality").addEventListener("change", render);
+    document.getElementById("oldcity").onclick = function () { map.setView([41.3825, 2.176], 15); };
+    document.getElementById("city").onclick = function () { map.setView([41.395, 2.155], 12); };
+    document.getElementById("catalunya").onclick = function () { map.fitBounds([[41.20, 1.78], [41.72, 2.85]]); };
+    render();
+  </script>
+</body>
+</html>

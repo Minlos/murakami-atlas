@@ -29,6 +29,13 @@
       max-height: calc(100vh - 28px); overflow: auto;
     }
     h1 { font-size: 1.28rem; font-weight: 600; margin: 0 2px 2px; letter-spacing: .01em; }
+    .atlas {
+      display: flex; flex-wrap: wrap; gap: 10px 14px;
+      margin: 0 2px 12px; font-size: .68rem; letter-spacing: .14em;
+      text-transform: uppercase;
+    }
+    .atlas a { color: var(--muted); text-decoration: none; }
+    .atlas a:hover, .atlas a.here { color: var(--accent); }
     .sub { color: var(--muted); font-size: .8rem; line-height: 1.5; margin: 0 0 14px; }
     label { display: block; font-size: .68rem; letter-spacing: .12em; text-transform: uppercase;
       color: var(--muted); margin: 11px 0 5px; }
@@ -67,6 +74,11 @@
 <body>
   <div id="map"></div>
   <aside class="panel">
+    <nav class="atlas">
+      <a class="here" href="murakami-map.html">Murakami</a>
+      <a href="tokyo-literary-map.html">Tokyo</a>
+      <a href="barcelona-literary-map.html">Barcelona</a>
+    </nav>
     <h1>Murakami Atlas</h1>
     <p class="sub"><span class="count" id="count"></span> places from the novels. Filter by book. Otherworld sites stay off the pins on purpose.</p>
     <label for="work">Book</label>
