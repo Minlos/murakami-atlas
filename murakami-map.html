@@ -83,6 +83,8 @@
     <p class="sub"><span class="count" id="count"></span> places from the novels. Filter by book. Otherworld sites stay off the pins on purpose.</p>
     <label for="work">Book</label>
     <select id="work"></select>
+    <label for="author">Author</label>
+    <select id="author"></select>
     <label for="reality">How real</label>
     <select id="reality">
       <option value="all">All mappable places</option>
@@ -141,12 +143,34 @@
       {name:"Aomori corridor", ja:"青森", works:["Kafka on the Shore"], year:2002, reality:"neighborhood_only", lat:40.8222, lng:140.7474, note:"Nakata’s long walk is a corridor more than a single pin."}
     ];
 
+    const WORK_AUTHORS = {
+      "Hear the Wind Sing": "Haruki Murakami",
+      "Pinball, 1973": "Haruki Murakami",
+      "Norwegian Wood": "Haruki Murakami",
+      "Sputnik Sweetheart": "Haruki Murakami",
+      "Dance Dance Dance": "Haruki Murakami",
+      "After Dark": "Haruki Murakami",
+      "The Wind-Up Bird Chronicle": "Haruki Murakami",
+      "1Q84": "Haruki Murakami",
+      "South of the Border, West of the Sun": "Haruki Murakami",
+      "Kafka on the Shore": "Haruki Murakami",
+      "A Wild Sheep Chase": "Haruki Murakami",
+      "Colorless Tsukuru Tazaki": "Haruki Murakami",
+      "Killing Commendatore": "Haruki Murakami",
+      "Blind Willow, Sleeping Woman": "Haruki Murakami",
+      "What I Talk About When I Talk About Running": "Haruki Murakami"
+    };
+
     const COLORS = {
       real: "#d4b483",
       inspired_by: "#7eb8a8",
       neighborhood_only: "#8aa0c4",
       memory: "#c4898a"
     };
+
+    function authorsOf(p) {
+      return [...new Set(p.works.map(function (w) { return WORK_AUTHORS[w] || w; }))];
+    }
 
     const map = L.map("map", { zoomControl: true, minZoom: 2 }).setView([35.68, 139.70], 11);
     L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
@@ -159,14 +183,21 @@
     workSelect.innerHTML = '<option value="all">All books in this atlas</option>' +
       allWorks.map(w => '<option value="' + w.replace(/"/g, "&quot;") + '">' + w + "</option>").join("");
 
+    const allAuthors = [...new Set(PLACES.flatMap(authorsOf))].sort();
+    const authorSelect = document.getElementById("author");
+    authorSelect.innerHTML = '<option value="all">All authors in this atlas</option>' +
+      allAuthors.map(a => '<option value="' + a.replace(/"/g, "&quot;") + '">' + a + "</option>").join("");
+
     const layer = L.layerGroup().addTo(map);
 
     function render() {
       layer.clearLayers();
       const work = workSelect.value;
+      const author = authorSelect.value;
       const reality = document.getElementById("reality").value;
       const shown = PLACES.filter(p => {
         if (work !== "all" && p.works.indexOf(work) === -1) return false;
+        if (author !== "all" && authorsOf(p).indexOf(author) === -1) return false;
         if (reality !== "all" && p.reality !== reality) return false;
         return true;
       });
@@ -180,9 +211,9 @@
           fillOpacity: 0.95
         });
         m.bindPopup(
-          '<p class="popup-kicker">' + p.works.join(" · ") + "</p>" +
+          '<p class="popup-kicker">' + authorsOf(p).join(" · ") + "</p>" +
           '<p class="popup-title">' + p.name + "</p>" +
-          '<p class="popup-ja">' + p.ja + " · " + p.reality.replace(/_/g, " ") + "</p>" +
+          '<p class="popup-ja">' + p.ja + " · " + p.works.join(" · ") + " · " + p.reality.replace(/_/g, " ") + "</p>" +
           '<p class="popup-note">' + p.note + "</p>"
         );
         m.addTo(layer);
@@ -190,6 +221,7 @@
     }
 
     workSelect.addEventListener("change", render);
+    authorSelect.addEventListener("change", render);
     document.getElementById("reality").addEventListener("change", render);
     document.getElementById("tokyo").onclick = function () { map.setView([35.68, 139.70], 12); };
     document.getElementById("japan").onclick = function () { map.fitBounds([[31.0, 129.4], [45.6, 145.9]]); };

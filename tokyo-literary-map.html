@@ -83,6 +83,8 @@
     <p class="sub"><span class="count" id="count"></span> places from the novels. Filter by book. Interiors and vanished quarters stay off the pins on purpose.</p>
     <label for="work">Book</label>
     <select id="work"></select>
+    <label for="author">Author</label>
+    <select id="author"></select>
     <label for="reality">How real</label>
     <select id="reality">
       <option value="all">All mappable places</option>
@@ -139,12 +141,38 @@
       {name:"Koishikawa", ja:"小石川", works:["I Am a Cat"], year:1905, reality:"neighborhood_only", lat:35.7054, lng:139.7494, note:"Soseki’s cat narrates a Bunkyo house. The garden is real; the household is a device."}
     ];
 
+    const WORK_AUTHORS = {
+      "Kokoro": "Natsume Sōseki",
+      "Sanshirō": "Natsume Sōseki",
+      "I Am a Cat": "Natsume Sōseki",
+      "Norwegian Wood": "Haruki Murakami",
+      "Dance Dance Dance": "Haruki Murakami",
+      "The Scarlet Gang of Asakusa": "Yasunari Kawabata",
+      "The Sound of the Mountain": "Yasunari Kawabata",
+      "A Strange Tale from East of the River": "Nagai Kafū",
+      "The River Sumida": "Nagai Kafū",
+      "Takekurabe": "Higuchi Ichiyō",
+      "Rashomon": "Ryūnosuke Akutagawa",
+      "Naomi": "Jun'ichirō Tanizaki",
+      "The Gourmet Club": "Jun'ichirō Tanizaki",
+      "Confessions of a Mask": "Yukio Mishima",
+      "Runaway Horses": "Yukio Mishima",
+      "Kitchen": "Banana Yoshimoto",
+      "Almost Transparent Blue": "Ryū Murakami",
+      "The Broken Commandment": "Shimazaki Tōson",
+      "No Longer Human": "Osamu Dazai"
+    };
+
     const COLORS = {
       real: "#d4b483",
       inspired_by: "#7eb8a8",
       neighborhood_only: "#8aa0c4",
       memory: "#c4898a"
     };
+
+    function authorsOf(p) {
+      return [...new Set(p.works.map(function (w) { return WORK_AUTHORS[w] || w; }))];
+    }
 
     const map = L.map("map", { zoomControl: true, minZoom: 2 }).setView([35.68, 139.75], 12);
     L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
@@ -157,14 +185,21 @@
     workSelect.innerHTML = '<option value="all">All books in this atlas</option>' +
       allWorks.map(w => '<option value="' + w.replace(/"/g, "&quot;") + '">' + w + "</option>").join("");
 
+    const allAuthors = [...new Set(PLACES.flatMap(authorsOf))].sort();
+    const authorSelect = document.getElementById("author");
+    authorSelect.innerHTML = '<option value="all">All authors in this atlas</option>' +
+      allAuthors.map(a => '<option value="' + a.replace(/"/g, "&quot;") + '">' + a + "</option>").join("");
+
     const layer = L.layerGroup().addTo(map);
 
     function render() {
       layer.clearLayers();
       const work = workSelect.value;
+      const author = authorSelect.value;
       const reality = document.getElementById("reality").value;
       const shown = PLACES.filter(p => {
         if (work !== "all" && p.works.indexOf(work) === -1) return false;
+        if (author !== "all" && authorsOf(p).indexOf(author) === -1) return false;
         if (reality !== "all" && p.reality !== reality) return false;
         return true;
       });
@@ -178,9 +213,9 @@
           fillOpacity: 0.95
         });
         m.bindPopup(
-          '<p class="popup-kicker">' + p.works.join(" · ") + "</p>" +
+          '<p class="popup-kicker">' + authorsOf(p).join(" · ") + "</p>" +
           '<p class="popup-title">' + p.name + "</p>" +
-          '<p class="popup-ja">' + p.ja + " · " + p.reality.replace(/_/g, " ") + "</p>" +
+          '<p class="popup-ja">' + p.ja + " · " + p.works.join(" · ") + " · " + p.reality.replace(/_/g, " ") + "</p>" +
           '<p class="popup-note">' + p.note + "</p>"
         );
         m.addTo(layer);
@@ -188,6 +223,7 @@
     }
 
     workSelect.addEventListener("change", render);
+    authorSelect.addEventListener("change", render);
     document.getElementById("reality").addEventListener("change", render);
     document.getElementById("yamanote").onclick = function () { map.setView([35.681, 139.767], 13); };
     document.getElementById("tokyo").onclick = function () { map.setView([35.68, 139.70], 11); };

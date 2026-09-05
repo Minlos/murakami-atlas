@@ -83,6 +83,8 @@
     <p class="sub"><span class="count" id="count"></span> places from the novels. Filter by book. The Cemetery of Forgotten Books stays off the pins on purpose.</p>
     <label for="work">Book</label>
     <select id="work"></select>
+    <label for="author">Author</label>
+    <select id="author"></select>
     <label for="reality">How real</label>
     <select id="reality">
       <option value="all">All mappable places</option>
@@ -141,12 +143,35 @@
       {name:"Blanes", ca:"Blanes", works:["The Skating Rink"], year:1993, reality:"inspired_by", lat:41.6742, lng:2.7904, note:"Bolaño lived here. The Skating Rink’s Costa Brava town is a schematic of this fishing-and-holiday shore."}
     ];
 
+    const WORK_AUTHORS = {
+      "In Diamond Square": "Mercè Rodoreda",
+      "Cathedral of the Sea": "Ildefonso Falcones",
+      "The Shadow of the Wind": "Carlos Ruiz Zafón",
+      "Nada": "Carmen Laforet",
+      "Homage to Catalonia": "George Orwell",
+      "The Southern Seas": "Manuel Vázquez Montalbán",
+      "The City of Marvels": "Eduardo Mendoza",
+      "The Thief's Journal": "Jean Genet",
+      "Carvalho": "Manuel Vázquez Montalbán",
+      "L'auca del senyor Esteve": "Santiago Rusiñol",
+      "The Time of the Cherries": "Montserrat Roig",
+      "Last Evenings with Teresa": "Juan Marsé",
+      "Homage to Barcelona": "Colm Tóibín",
+      "Don Quixote": "Miguel de Cervantes",
+      "The South": "Colm Tóibín",
+      "The Skating Rink": "Roberto Bolaño"
+    };
+
     const COLORS = {
       real: "#d4b483",
       inspired_by: "#7eb8a8",
       neighborhood_only: "#8aa0c4",
       memory: "#c4898a"
     };
+
+    function authorsOf(p) {
+      return [...new Set(p.works.map(function (w) { return WORK_AUTHORS[w] || w; }))];
+    }
 
     const map = L.map("map", { zoomControl: true, minZoom: 2 }).setView([41.387, 2.170], 13);
     L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
@@ -159,14 +184,21 @@
     workSelect.innerHTML = '<option value="all">All books in this atlas</option>' +
       allWorks.map(w => '<option value="' + w.replace(/"/g, "&quot;") + '">' + w + "</option>").join("");
 
+    const allAuthors = [...new Set(PLACES.flatMap(authorsOf))].sort();
+    const authorSelect = document.getElementById("author");
+    authorSelect.innerHTML = '<option value="all">All authors in this atlas</option>' +
+      allAuthors.map(a => '<option value="' + a.replace(/"/g, "&quot;") + '">' + a + "</option>").join("");
+
     const layer = L.layerGroup().addTo(map);
 
     function render() {
       layer.clearLayers();
       const work = workSelect.value;
+      const author = authorSelect.value;
       const reality = document.getElementById("reality").value;
       const shown = PLACES.filter(p => {
         if (work !== "all" && p.works.indexOf(work) === -1) return false;
+        if (author !== "all" && authorsOf(p).indexOf(author) === -1) return false;
         if (reality !== "all" && p.reality !== reality) return false;
         return true;
       });
@@ -180,9 +212,9 @@
           fillOpacity: 0.95
         });
         m.bindPopup(
-          '<p class="popup-kicker">' + p.works.join(" · ") + "</p>" +
+          '<p class="popup-kicker">' + authorsOf(p).join(" · ") + "</p>" +
           '<p class="popup-title">' + p.name + "</p>" +
-          '<p class="popup-ja">' + p.ca + " · " + p.reality.replace(/_/g, " ") + "</p>" +
+          '<p class="popup-ja">' + p.ca + " · " + p.works.join(" · ") + " · " + p.reality.replace(/_/g, " ") + "</p>" +
           '<p class="popup-note">' + p.note + "</p>"
         );
         m.addTo(layer);
@@ -190,6 +222,7 @@
     }
 
     workSelect.addEventListener("change", render);
+    authorSelect.addEventListener("change", render);
     document.getElementById("reality").addEventListener("change", render);
     document.getElementById("oldcity").onclick = function () { map.setView([41.3825, 2.176], 15); };
     document.getElementById("city").onclick = function () { map.setView([41.395, 2.155], 12); };
