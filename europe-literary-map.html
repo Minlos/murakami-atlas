@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Europe Literary Map — Nabokov, Cortazar, Hesse, Mann</title>
+  <title>Europe Literary Map — Nabokov, Cortazar, Hesse, Mann, Kafka, Joyce</title>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <style>
     :root {
@@ -81,7 +81,7 @@
       <a class="here" href="europe-literary-map.html">Europe</a>
     </nav>
     <h1>Europe Literary Map</h1>
-    <p class="sub"><span class="count" id="count"></span> places from Nabokov, Cortazar, Hesse, and Mann. Filter by book or author. Invented cities stay off the pins.</p>
+    <p class="sub"><span class="count" id="count"></span> places from Nabokov, Cortazar, Hesse, Mann, Kafka, and Joyce. Filter by book or author. Invented cities stay off the pins.</p>
     <label for="work">Book</label>
     <select id="work"></select>
     <label for="author">Author</label>
@@ -106,7 +106,7 @@
       <span><i class="swatch" style="background:#c4898a"></i>memory</span>
     </div>
     <div class="otherworld">
-      <strong>Unmapped on purpose.</strong> Siddhartha’s India; Pale Fire’s New Wye; 62’s composite city; Castalia; Kaisersaschern in Doctor Faustus. A coordinate would be a lie.
+      <strong>Unmapped on purpose.</strong> Siddhartha’s India; Pale Fire’s New Wye; 62’s composite city; Castalia; Kaisersaschern; Kafka’s Amerika; the attic court in The Trial. A coordinate would be a lie.
     </div>
   </aside>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -143,7 +143,21 @@
       {name:"Kusnacht", ja:"Kusnacht, Zurich lake", works:["Joseph and His Brothers"], year:1933, reality:"real", lat:47.3236, lng:8.5825, note:"The first exile house, 1933–38. Joseph was continued here, looking at a Swiss lake instead of the Nile."},
       {name:"Weimar", ja:"Weimar, Germany", works:["Lotte in Weimar"], year:1939, reality:"real", lat:50.9795, lng:11.3290, note:"Goethe’s town, used as a novel. Mann writes Lotte’s return into a real street plan."},
       {name:"Elsinore coast", ja:"Helsingor, Denmark", works:["Tonio Kroger"], year:1903, reality:"inspired_by", lat:56.0360, lng:12.6130, note:"Tonio’s Danish seaside is this shore more than a hotel name. Hamlet’s town at the edge of the Baltic."},
-      {name:"Nida", ja:"Nida, Curonian Spit", works:["Death in Venice"], year:1912, reality:"real", lat:55.3036, lng:21.0069, note:"The summer house in what was Nidden. Death in Venice was begun here, looking at a different sea than the Lido."}
+      {name:"Nida", ja:"Nida, Curonian Spit", works:["Death in Venice"], year:1912, reality:"real", lat:55.3036, lng:21.0069, note:"The summer house in what was Nidden. Death in Venice was begun here, looking at a different sea than the Lido."},
+      {name:"Old Town, Prague", ja:"Old Town, Prague", works:["The Metamorphosis","The Trial"], year:1915, reality:"neighborhood_only", lat:50.0875, lng:14.4207, note:"Kafka’s family streets. Gregor’s room and Josef K.’s city are this quarter, not a flat you can book."},
+      {name:"Prague Castle", ja:"Hradcany, Prague", works:["The Castle"], year:1926, reality:"inspired_by", lat:50.0910, lng:14.4016, note:"The Castle is not a guidebook to Hradcany. The hill is still the picture readers bring to the book."},
+      {name:"Josefov", ja:"Josefov, Prague", works:["The Trial"], year:1925, reality:"neighborhood_only", lat:50.0900, lng:14.4170, note:"The old Jewish town. The Trial’s city has this maze under it; the ghetto as it was is gone."},
+      {name:"St Vitus Cathedral", ja:"St Vitus, Prague", works:["The Trial"], year:1925, reality:"inspired_by", lat:50.0909, lng:14.4005, note:"The cathedral chapter. Readers put it on St Vitus; Kafka does not give you a door."},
+      {name:"Sirem", ja:"Sirem (Zurau), Bohemia", works:["A Country Doctor"], year:1919, reality:"real", lat:50.2270, lng:13.4500, note:"The village where Kafka stayed with his sister Ottla. The country stories have this Bohemian winter in them."},
+      {name:"Sandycove Tower", ja:"Sandycove, Dublin", works:["Ulysses"], year:1922, reality:"real", lat:53.2885, lng:-6.1134, note:"The Martello tower. Ulysses opens here, 16 June 1904, with Buck Mulligan on the gunrest."},
+      {name:"Eccles Street", ja:"Eccles Street, Dublin", works:["Ulysses"], year:1922, reality:"real", lat:53.3575, lng:-6.2638, note:"Bloom’s house. Number 7 is gone; the street is still the morning of the book."},
+      {name:"Nighttown", ja:"Monto, Dublin", works:["Ulysses"], year:1922, reality:"memory", lat:53.3518, lng:-6.2505, note:"The brothel district of Circe. The quarter was cleared; the chapter keeps the grid."},
+      {name:"Usher's Island", ja:"Usher's Island, Dublin", works:["Dubliners"], year:1914, reality:"real", lat:53.3458, lng:-6.2825, note:"The house of The Dead. A real address on the Liffey; the snow is the story’s."},
+      {name:"Clongowes Wood", ja:"Clongowes Wood, Kildare", works:["A Portrait of the Artist as a Young Man"], year:1916, reality:"real", lat:53.3112, lng:-6.6850, note:"Stephen’s first school. Joyce was sent here; the novel keeps the corridor and the pandybat."},
+      {name:"Chapelizod", ja:"Chapelizod, Dublin", works:["Finnegans Wake"], year:1939, reality:"neighborhood_only", lat:53.3475, lng:-6.3450, note:"The Wake’s village at the edge of Phoenix Park. A real place asked to carry a night language."},
+      {name:"Trieste", ja:"Via Bramante, Trieste", works:["A Portrait of the Artist as a Young Man","Ulysses"], year:1916, reality:"real", lat:45.6510, lng:13.7768, note:"Where Portrait was finished and Ulysses begun. A real apartment city, not Dublin-on-the-Adriatic."},
+      {name:"Universitatstrasse", ja:"Universitatstrasse, Zurich", works:["Ulysses"], year:1922, reality:"real", lat:47.3766, lng:8.5465, note:"Joyce finished Ulysses in Zurich. A different Swiss pin from Hesse’s unnamed city and Mann’s lake house."},
+      {name:"Rue de l'Odeon", ja:"12 rue de l'Odeon, Paris", works:["Ulysses"], year:1922, reality:"real", lat:48.8506, lng:2.3386, note:"Sylvia Beach’s Shakespeare and Company. Ulysses was published from this street, not from Dublin."}
     ];
 
     const WORK_AUTHORS = {
@@ -171,7 +185,15 @@
       "Doctor Faustus": "Thomas Mann",
       "The Magic Mountain": "Thomas Mann",
       "Joseph and His Brothers": "Thomas Mann",
-      "Lotte in Weimar": "Thomas Mann"
+      "Lotte in Weimar": "Thomas Mann",
+      "The Metamorphosis": "Franz Kafka",
+      "The Trial": "Franz Kafka",
+      "The Castle": "Franz Kafka",
+      "A Country Doctor": "Franz Kafka",
+      "Ulysses": "James Joyce",
+      "Dubliners": "James Joyce",
+      "A Portrait of the Artist as a Young Man": "James Joyce",
+      "Finnegans Wake": "James Joyce"
     };
 
     const COLORS = {
@@ -238,7 +260,7 @@
     document.getElementById("reality").addEventListener("change", render);
     document.getElementById("west").onclick = function () { map.setView([48.2, 6.5], 6); };
     document.getElementById("alps").onclick = function () { map.setView([46.6, 8.2], 7); };
-    document.getElementById("europe").onclick = function () { map.fitBounds([[43.7, -0.2], [60.0, 31.0]]); };
+    document.getElementById("europe").onclick = function () { map.fitBounds([[43.4, -6.8], [60.0, 31.2]]); };
     render();
   </script>
 </body>
