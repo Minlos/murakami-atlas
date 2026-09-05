@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Murakami Atlas — an interactive map of places in the novels</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <style>
+    :root {
+      --ink: #efe6d6;
+      --muted: #9b917f;
+      --paper: #101218;
+      --panel: rgba(22, 25, 34, .92);
+      --line: #323848;
+      --accent: #d4b07a;
+    }
+    * { box-sizing: border-box; }
+    html, body { height: 100%; margin: 0; background: var(--paper); color: var(--ink);
+      font-family: Georgia, "Iowan Old Style", Palatino, serif; }
+    #map { position: absolute; inset: 0; }
+    .leaflet-container { background: #101218; font-family: inherit; }
+    .leaflet-tile-pane { filter: invert(1) hue-rotate(180deg) brightness(.92) contrast(.88) saturate(.3); }
+    .panel {
+      position: absolute; z-index: 500; top: 14px; left: 14px;
+      width: min(380px, calc(100vw - 28px));
+      background: var(--panel); backdrop-filter: blur(12px);
+      border: 1px solid var(--line); border-radius: 16px;
+      padding: 18px 18px 14px; box-shadow: 0 18px 50px rgba(0,0,0,.5);
+      max-height: calc(100vh - 28px); overflow: auto;
+    }
+    h1 { font-size: 1.28rem; font-weight: 600; margin: 0 2px 2px; letter-spacing: .01em; }
+    .sub { color: var(--muted); font-size: .8rem; line-height: 1.5; margin: 0 0 14px; }
+    label { display: block; font-size: .68rem; letter-spacing: .12em; text-transform: uppercase;
+      color: var(--muted); margin: 11px 0 5px; }
+    select, button {
+      width: 100%; background: #12141c; color: var(--ink); border: 1px solid var(--line);
+      border-radius: 8px; padding: 8px 10px; font: inherit; font-size: .86rem;
+    }
+    .row { display: flex; gap: 8px; margin-top: 10px; }
+    .row button { cursor: pointer; }
+    .row button:hover { border-color: var(--accent); color: var(--accent); }
+    .legend { display: flex; flex-wrap: wrap; gap: 8px 14px; margin-top: 12px; font-size: .75rem; color: var(--muted); }
+    .swatch { width: 9px; height: 9px; border-radius: 50%; display: inline-block; margin-right: 5px; vertical-align: middle; }
+    .otherworld {
+      margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--line);
+      font-size: .8rem; color: var(--muted); line-height: 1.5;
+    }
+    .otherworld strong { color: var(--accent); font-weight: 600; }
+    .count { color: var(--accent); font-variant-numeric: tabular-nums; }
+    .leaflet-popup-content-wrapper {
+      background: #1a1d27; color: var(--ink); border-radius: 12px;
+      border: 1px solid var(--line); box-shadow: 0 10px 28px rgba(0,0,0,.45);
+    }
+    .leaflet-popup-tip { background: #1a1d27; }
+    .leaflet-popup-content { margin: 13px 15px; font-size: .9rem; line-height: 1.45; }
+    .popup-kicker { font-size: .68rem; letter-spacing: .1em; text-transform: uppercase; color: var(--accent); margin: 0 0 5px; }
+    .popup-title { font-size: 1.08rem; margin: 0 0 2px; }
+    .popup-ja { color: var(--muted); font-size: .8rem; margin: 0 0 8px; }
+    .popup-note { color: #d8d0c2; margin: 0; }
+    .leaflet-control-attribution { background: rgba(16,18,24,.75) !important; color: #6e675c !important; }
+    .leaflet-control-attribution a { color: #8e8576 !important; }
+    @media (max-width: 640px) {
+      .panel { top: auto; bottom: 10px; left: 10px; right: 10px; width: auto; max-height: 46vh; }
+    }
+  </style>
+</head>
+<body>
+  <div id="map"></div>
+  <aside class="panel">
+    <h1>Murakami Atlas</h1>
+    <p class="sub"><span class="count" id="count"></span> places from the novels. Filter by book. Otherworld sites stay off the pins on purpose.</p>
+    <label for="work">Book</label>
+    <select id="work"></select>
+    <label for="reality">How real</label>
+    <select id="reality">
+      <option value="all">All mappable places</option>
+      <option value="real">Named real places</option>
+      <option value="inspired_by">Inspired by a real town</option>
+      <option value="neighborhood_only">Neighborhood / schematic</option>
+      <option value="memory">Memory, war, or story-only</option>
+    </select>
+    <div class="row">
+      <button type="button" id="tokyo">Tokyo</button>
+      <button type="button" id="japan">Japan</button>
+      <button type="button" id="world">World</button>
+    </div>
+    <div class="legend">
+      <span><i class="swatch" style="background:#d4b483"></i>real</span>
+      <span><i class="swatch" style="background:#7eb8a8"></i>inspired by</span>
+      <span><i class="swatch" style="background:#8aa0c4"></i>neighborhood</span>
+      <span><i class="swatch" style="background:#c4898a"></i>memory</span>
+    </div>
+    <div class="otherworld">
+      <strong>Unmapped on purpose.</strong> End of the World; the Town with Uncertain Walls; 1Q84’s second moon; the sixth-floor darkness of the Dolphin Hotel; the Komura Memorial Library as a building. A coordinate would be a lie.
+    </div>
+  </aside>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script>
+    const PLACES = [
+      {name:"Sannomiya / Kobe", ja:"三宮・神戸", works:["Hear the Wind Sing","Pinball, 1973"], year:1979, reality:"real", lat:34.6937, lng:135.1955, note:"Hometown coast of the Rat trilogy. Murakami grew up in the Hanshin area."},
+      {name:"Ashiya", ja:"芦屋", works:["Hear the Wind Sing","Pinball, 1973"], year:1979, reality:"real", lat:34.726, lng:135.304, note:"Monkey Park (Ashiya-Uchide Park) and the walking ground of the early books."},
+      {name:"ICU, Mitaka", ja:"国際基督教大学", works:["Pinball, 1973"], year:1980, reality:"real", lat:35.6876, lng:139.5306, note:"University campus in western Tokyo, drawn from life."},
+      {name:"Kichijoji", ja:"吉祥寺", works:["Norwegian Wood","Sputnik Sweetheart"], year:1987, reality:"real", lat:35.7032, lng:139.5798, note:"Toru Watanabe’s neighborhood; later Sumire’s."},
+      {name:"Inokashira Park", ja:"井の頭公園", works:["Norwegian Wood"], year:1987, reality:"real", lat:35.7001, lng:139.5763, note:"The park attached to Kichijoji in Norwegian Wood."},
+      {name:"Waseda", ja:"早稲田", works:["Norwegian Wood"], year:1987, reality:"real", lat:35.7090, lng:139.7195, note:"Student Tokyo — Murakami’s own university district."},
+      {name:"Rikugien Garden", ja:"六義園", works:["Norwegian Wood"], year:1987, reality:"real", lat:35.7331, lng:139.7467, note:"Named Edo garden in Bunkyo."},
+      {name:"Shinjuku", ja:"新宿", works:["Norwegian Wood","Dance Dance Dance","After Dark"], year:1987, reality:"real", lat:35.6938, lng:139.7036, note:"Student nights, jazz bars, the city’s loud room."},
+      {name:"Sendagaya", ja:"千駄ヶ谷", works:["Dance Dance Dance"], year:1988, reality:"real", lat:35.6814, lng:139.7112, note:"Where Murakami and his wife ran the Peter Cat jazz bar."},
+      {name:"Shibuya", ja:"渋谷", works:["After Dark","Dance Dance Dance"], year:2004, reality:"real", lat:35.6595, lng:139.7005, note:"One night of love hotels, late diners, stopped clocks."},
+      {name:"Setagaya", ja:"世田谷", works:["The Wind-Up Bird Chronicle","1Q84"], year:1994, reality:"neighborhood_only", lat:35.6466, lng:139.6532, note:"The well, the alley, the missing cat — suburban Tokyo as the uncanny."},
+      {name:"Sangenjaya", ja:"三軒茶屋", works:["1Q84"], year:2009, reality:"real", lat:35.6435, lng:139.6694, note:"Aomame leaves the elevated expressway and climbs down into another 1984."},
+      {name:"Yotsuya", ja:"四谷", works:["South of the Border, West of the Sun"], year:1992, reality:"real", lat:35.6861, lng:139.7304, note:"Office-district Tokyo looking down on a city that will not stay still."},
+      {name:"Ginza / Wako Building", ja:"銀座・和光", works:["The Wind-Up Bird Chronicle"], year:1994, reality:"real", lat:35.6714, lng:139.7637, note:"Named 1980s downtown landmark."},
+      {name:"Akasaka", ja:"赤坂", works:["The Wind-Up Bird Chronicle"], year:1994, reality:"real", lat:35.6722, lng:139.7365, note:"Nightlife and business Tokyo in the Wind-Up Bird years."},
+      {name:"Nogata, Nakano", ja:"野方", works:["Kafka on the Shore"], year:2002, reality:"real", lat:35.7194, lng:139.6515, note:"Where Kafka Tamura’s present-day story begins."},
+      {name:"Takamatsu", ja:"高松", works:["Kafka on the Shore"], year:2002, reality:"real", lat:34.3428, lng:134.0466, note:"Shikoku shore town. The Komura Memorial Library itself is fictional."},
+      {name:"Sapporo", ja:"札幌", works:["A Wild Sheep Chase","Dance Dance Dance"], year:1982, reality:"real", lat:43.0618, lng:141.3545, note:"Hokkaido capital; the Dolphin Hotel is usually mapped to a real Sapporo plaza hotel."},
+      {name:"Asahikawa", ja:"旭川", works:["A Wild Sheep Chase"], year:1982, reality:"real", lat:43.7709, lng:142.3650, note:"Northward stop on the sheep chase."},
+      {name:"Bifuka (as Junitaki)", ja:"美深", works:["A Wild Sheep Chase"], year:1982, reality:"inspired_by", lat:44.4869, lng:142.3606, note:"Junitaki is invented. Readers place it on Bifuka in northern Hokkaido."},
+      {name:"Nagoya", ja:"名古屋", works:["Colorless Tsukuru Tazaki"], year:2013, reality:"real", lat:35.1709, lng:136.9083, note:"High-school friends and the station-haunted later life."},
+      {name:"Hills near Odawara", ja:"小田原近郊", works:["Killing Commendatore"], year:2017, reality:"neighborhood_only", lat:35.2644, lng:139.1566, note:"The painter’s borrowed house, and the pit in the woods."},
+      {name:"Hamburg", ja:"ハンブルク", works:["Norwegian Wood"], year:1987, reality:"memory", lat:53.5511, lng:9.9937, note:"The foreign room Naoko’s story opens toward."},
+      {name:"A Greek island", ja:"ギリシャの島", works:["Sputnik Sweetheart"], year:1999, reality:"neighborhood_only", lat:37.4415, lng:25.1442, note:"Schematic Aegean pin. Sumire’s island is not a tourist stop."},
+      {name:"Helsinki", ja:"ヘルシンキ", works:["Colorless Tsukuru Tazaki"], year:2013, reality:"real", lat:60.1699, lng:24.9384, note:"Northern chapters of Tsukuru’s pilgrimage."},
+      {name:"Vienna", ja:"ウィーン", works:["Killing Commendatore"], year:2017, reality:"memory", lat:48.2082, lng:16.3738, note:"Wartime Vienna inside the Commendatore story."},
+      {name:"Shanghai", ja:"上海", works:["Blind Willow, Sleeping Woman"], year:2006, reality:"memory", lat:31.2304, lng:121.4737, note:"Story-level geography rather than a novel-length setting."},
+      {name:"New York", ja:"ニューヨーク", works:["Blind Willow, Sleeping Woman"], year:2006, reality:"memory", lat:40.7678, lng:-73.9718, note:"Appears in stories, not as a substitute Tokyo."},
+      {name:"Boston / Cambridge", ja:"ボストン", works:["What I Talk About When I Talk About Running"], year:2007, reality:"real", lat:42.3601, lng:-71.0589, note:"Essay geography: Murakami’s time around Boston Harbor and the Charles."},
+      {name:"Aomori corridor", ja:"青森", works:["Kafka on the Shore"], year:2002, reality:"neighborhood_only", lat:40.8222, lng:140.7474, note:"Nakata’s long walk is a corridor more than a single pin."}
+    ];
+
+    const COLORS = {
+      real: "#d4b483",
+      inspired_by: "#7eb8a8",
+      neighborhood_only: "#8aa0c4",
+      memory: "#c4898a"
+    };
+
+    const map = L.map("map", { zoomControl: true, minZoom: 2 }).setView([35.68, 139.70], 11);
+    L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      attribution: "&copy; OpenStreetMap",
+      maxZoom: 19
+    }).addTo(map);
+
+    const allWorks = [...new Set(PLACES.flatMap(p => p.works))].sort();
+    const workSelect = document.getElementById("work");
+    workSelect.innerHTML = '<option value="all">All books in this atlas</option>' +
+      allWorks.map(w => '<option value="' + w.replace(/"/g, "&quot;") + '">' + w + "</option>").join("");
+
+    const layer = L.layerGroup().addTo(map);
+
+    function render() {
+      layer.clearLayers();
+      const work = workSelect.value;
+      const reality = document.getElementById("reality").value;
+      const shown = PLACES.filter(p => {
+        if (work !== "all" && p.works.indexOf(work) === -1) return false;
+        if (reality !== "all" && p.reality !== reality) return false;
+        return true;
+      });
+      document.getElementById("count").textContent = shown.length;
+      shown.forEach(p => {
+        const m = L.circleMarker([p.lat, p.lng], {
+          radius: 8,
+          color: "#0b0c10",
+          weight: 1,
+          fillColor: COLORS[p.reality] || "#d4b483",
+          fillOpacity: 0.95
+        });
+        m.bindPopup(
+          '<p class="popup-kicker">' + p.works.join(" · ") + "</p>" +
+          '<p class="popup-title">' + p.name + "</p>" +
+          '<p class="popup-ja">' + p.ja + " · " + p.reality.replace(/_/g, " ") + "</p>" +
+          '<p class="popup-note">' + p.note + "</p>"
+        );
+        m.addTo(layer);
+      });
+    }
+
+    workSelect.addEventListener("change", render);
+    document.getElementById("reality").addEventListener("change", render);
+    document.getElementById("tokyo").onclick = function () { map.setView([35.68, 139.70], 12); };
+    document.getElementById("japan").onclick = function () { map.fitBounds([[31.0, 129.4], [45.6, 145.9]]); };
+    document.getElementById("world").onclick = function () { map.setView([35, 20], 2); };
+    render();
+  </script>
+</body>
+</html>
