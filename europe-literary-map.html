@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Europe Literary Map — Nabokov, Cortazar, Hesse</title>
+  <title>Europe Literary Map — Nabokov, Cortazar, Hesse, Mann</title>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <style>
     :root {
@@ -81,7 +81,7 @@
       <a class="here" href="europe-literary-map.html">Europe</a>
     </nav>
     <h1>Europe Literary Map</h1>
-    <p class="sub"><span class="count" id="count"></span> places from Nabokov, Cortazar, and Hesse. Filter by book or author. Invented cities stay off the pins.</p>
+    <p class="sub"><span class="count" id="count"></span> places from Nabokov, Cortazar, Hesse, and Mann. Filter by book or author. Invented cities stay off the pins.</p>
     <label for="work">Book</label>
     <select id="work"></select>
     <label for="author">Author</label>
@@ -106,7 +106,7 @@
       <span><i class="swatch" style="background:#c4898a"></i>memory</span>
     </div>
     <div class="otherworld">
-      <strong>Unmapped on purpose.</strong> Siddhartha’s India; Pale Fire’s New Wye; 62’s composite city; Castalia; the Journey to the East. A coordinate would be a lie.
+      <strong>Unmapped on purpose.</strong> Siddhartha’s India; Pale Fire’s New Wye; 62’s composite city; Castalia; Kaisersaschern in Doctor Faustus. A coordinate would be a lie.
     </div>
   </aside>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -134,7 +134,16 @@
       {name:"Bern", ja:"Bern, Switzerland", works:["Rosshalde"], year:1914, reality:"real", lat:46.9480, lng:7.4474, note:"The years before Montagnola. Rosshalde’s painter is a man leaving a house like this."},
       {name:"Montagnola", ja:"Montagnola, Ticino", works:["Siddhartha","Steppenwolf","The Glass Bead Game"], year:1922, reality:"real", lat:45.9830, lng:8.9130, note:"Hesse’s house from 1919. Siddhartha, Steppenwolf, and The Glass Bead Game were written on this hill. India and Castalia are not this hill."},
       {name:"Zurich", ja:"Zurich, Switzerland", works:["Steppenwolf"], year:1927, reality:"neighborhood_only", lat:47.3769, lng:8.5417, note:"Readers put Harry Haller’s city on Basel or Zurich. The Magic Theatre is not a street number."},
-      {name:"Baden", ja:"Baden, Aargau", works:["The Glass Bead Game"], year:1943, reality:"real", lat:47.4730, lng:8.3060, note:"The spa Hesse used. A real Swiss town beside an invented pedagogical province."}
+      {name:"Baden", ja:"Baden, Aargau", works:["The Glass Bead Game"], year:1943, reality:"real", lat:47.4730, lng:8.3060, note:"The spa Hesse used. A real Swiss town beside an invented pedagogical province."},
+      {name:"Lubeck", ja:"Lubeck, Germany", works:["Buddenbrooks","Tonio Kroger"], year:1901, reality:"real", lat:53.8683, lng:10.6865, note:"The Buddenbrook house on Mengstrasse is still there. Mann’s first novel is this merchant city, named."},
+      {name:"Travemunde", ja:"Travemunde, Baltic coast", works:["Buddenbrooks"], year:1901, reality:"real", lat:53.9610, lng:10.8710, note:"The family’s seaside. A real resort at the mouth of the Trave, not a symbol of decline."},
+      {name:"Munich", ja:"Herzogpark, Munich", works:["Death in Venice","Doctor Faustus"], year:1912, reality:"real", lat:48.1583, lng:11.6075, note:"The villa years before exile. Death in Venice was written here; Doctor Faustus still walks a Munich that would not stay."},
+      {name:"Davos", ja:"Schatzalp, Davos", works:["The Magic Mountain"], year:1924, reality:"real", lat:46.8028, lng:9.8117, note:"The Berghof is invented. Schatzalp and Davos Platz are the real high valley Hans Castorp arrives in."},
+      {name:"Lido, Venice", ja:"Hotel des Bains, Lido", works:["Death in Venice"], year:1912, reality:"real", lat:45.4145, lng:12.3775, note:"Aschenbach’s hotel. The Lido is a named beach; Tadzio is not a doorbell."},
+      {name:"Kusnacht", ja:"Kusnacht, Zurich lake", works:["Joseph and His Brothers"], year:1933, reality:"real", lat:47.3236, lng:8.5825, note:"The first exile house, 1933–38. Joseph was continued here, looking at a Swiss lake instead of the Nile."},
+      {name:"Weimar", ja:"Weimar, Germany", works:["Lotte in Weimar"], year:1939, reality:"real", lat:50.9795, lng:11.3290, note:"Goethe’s town, used as a novel. Mann writes Lotte’s return into a real street plan."},
+      {name:"Elsinore coast", ja:"Helsingor, Denmark", works:["Tonio Kroger"], year:1903, reality:"inspired_by", lat:56.0360, lng:12.6130, note:"Tonio’s Danish seaside is this shore more than a hotel name. Hamlet’s town at the edge of the Baltic."},
+      {name:"Nida", ja:"Nida, Curonian Spit", works:["Death in Venice"], year:1912, reality:"real", lat:55.3036, lng:21.0069, note:"The summer house in what was Nidden. Death in Venice was begun here, looking at a different sea than the Lido."}
     ];
 
     const WORK_AUTHORS = {
@@ -155,7 +164,14 @@
       "Steppenwolf": "Hermann Hesse",
       "Siddhartha": "Hermann Hesse",
       "The Glass Bead Game": "Hermann Hesse",
-      "Rosshalde": "Hermann Hesse"
+      "Rosshalde": "Hermann Hesse",
+      "Buddenbrooks": "Thomas Mann",
+      "Tonio Kroger": "Thomas Mann",
+      "Death in Venice": "Thomas Mann",
+      "Doctor Faustus": "Thomas Mann",
+      "The Magic Mountain": "Thomas Mann",
+      "Joseph and His Brothers": "Thomas Mann",
+      "Lotte in Weimar": "Thomas Mann"
     };
 
     const COLORS = {
