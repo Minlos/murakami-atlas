@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Literary Atlas — Murakami, Tokyo, Barcelona</title>
+  <style>
+    :root {
+      --ink: #efe6d6;
+      --muted: #9b917f;
+      --paper: #101218;
+      --panel: rgba(22, 25, 34, .92);
+      --line: #323848;
+      --accent: #d4b07a;
+    }
+    * { box-sizing: border-box; }
+    html, body { height: 100%; margin: 0; background: var(--paper); color: var(--ink);
+      font-family: Georgia, "Iowan Old Style", Palatino, serif; }
+    body {
+      display: grid; place-items: center; padding: 24px;
+      background:
+        radial-gradient(1200px 600px at 20% 10%, #1a1e2a 0%, transparent 55%),
+        var(--paper);
+    }
+    .panel {
+      width: min(440px, 100%);
+      background: var(--panel); backdrop-filter: blur(12px);
+      border: 1px solid var(--line); border-radius: 16px;
+      padding: 28px 26px 22px; box-shadow: 0 18px 50px rgba(0,0,0,.5);
+    }
+    .kicker { font-size: .68rem; letter-spacing: .14em; text-transform: uppercase;
+      color: var(--accent); margin: 0 0 10px; }
+    h1 { font-size: 1.5rem; font-weight: 600; margin: 0 0 8px; letter-spacing: .01em; }
+    .sub { color: var(--muted); font-size: .88rem; line-height: 1.5; margin: 0 0 22px; }
+    a.map {
+      display: block; color: var(--ink); text-decoration: none;
+      border: 1px solid var(--line); border-radius: 10px;
+      padding: 14px 14px 12px; margin: 0 0 8px; background: #12141c;
+    }
+    a.map:hover { border-color: var(--accent); }
+    a.map strong { display: block; font-size: 1.05rem; font-weight: 600; margin: 0 0 3px; }
+    a.map span { color: var(--muted); font-size: .8rem; }
+  </style>
+</head>
+<body>
+  <main class="panel">
+    <p class="kicker">Literary Atlas</p>
+    <h1>Three maps of places in the novels</h1>
+    <p class="sub">Open one. Filter by book. Pins are only for places that can honestly take a coordinate.</p>
+    <a class="map" href="murakami-map.html">
+      <strong>Murakami</strong>
+      <span>Japan and the rest of the novels — Tokyo, Hokkaido, the world</span>
+    </a>
+    <a class="map" href="tokyo-literary-map.html">
+      <strong>Tokyo</strong>
+      <span>Soseki, Ichiyo, Kafu, Kawabata, Dazai, Mishima, Yoshimoto</span>
+    </a>
+    <a class="map" href="barcelona-literary-map.html">
+      <strong>Barcelona</strong>
+      <span>Rodoreda, Orwell, Zafón, Montalbán, Mendoza, Cervantes</span>
+    </a>
+  </main>
+</body>
+</html>
