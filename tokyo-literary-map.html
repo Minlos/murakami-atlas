@@ -19,6 +19,7 @@
       font-family: Georgia, "Iowan Old Style", Palatino, serif; }
     #map { position: absolute; inset: 0; }
     .leaflet-container { background: #101218; font-family: inherit; }
+    .leaflet-tile-pane { filter: invert(1) hue-rotate(180deg) brightness(.92) contrast(.88) saturate(.3); }
     .panel {
       position: absolute; z-index: 500; top: 14px; left: 14px;
       width: min(380px, calc(100vw - 28px));
@@ -175,9 +176,8 @@
     }
 
     const map = L.map("map", { zoomControl: true, minZoom: 2 }).setView([35.68, 139.75], 12);
-    L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png", {
-      attribution: "&copy; OpenStreetMap &copy; CARTO",
-      subdomains: "abcd",
+    L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}", {
+      attribution: "Tiles &copy; Esri",
       maxZoom: 19
     }).addTo(map);
 
