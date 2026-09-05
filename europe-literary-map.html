@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Europe Literary Map — Nabokov, Cortazar, Hesse</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <style>
+    :root {
+      --ink: #efe6d6;
+      --muted: #9b917f;
+      --paper: #101218;
+      --panel: rgba(22, 25, 34, .92);
+      --line: #323848;
+      --accent: #d4b07a;
+    }
+    * { box-sizing: border-box; }
+    html, body { height: 100%; margin: 0; background: var(--paper); color: var(--ink);
+      font-family: Georgia, "Iowan Old Style", Palatino, serif; }
+    #map { position: absolute; inset: 0; }
+    .leaflet-container { background: #101218; font-family: inherit; }
+    .panel {
+      position: absolute; z-index: 500; top: 14px; left: 14px;
+      width: min(380px, calc(100vw - 28px));
+      background: var(--panel); backdrop-filter: blur(12px);
+      border: 1px solid var(--line); border-radius: 16px;
+      padding: 18px 18px 14px; box-shadow: 0 18px 50px rgba(0,0,0,.5);
+      max-height: calc(100vh - 28px); overflow: auto;
+    }
+    h1 { font-size: 1.28rem; font-weight: 600; margin: 0 2px 2px; letter-spacing: .01em; }
+    .atlas {
+      display: flex; flex-wrap: wrap; gap: 10px 14px;
+      margin: 0 2px 12px; font-size: .68rem; letter-spacing: .14em;
+      text-transform: uppercase;
+    }
+    .atlas a { color: var(--muted); text-decoration: none; }
+    .atlas a:hover, .atlas a.here { color: var(--accent); }
+    .sub { color: var(--muted); font-size: .8rem; line-height: 1.5; margin: 0 0 14px; }
+    label { display: block; font-size: .68rem; letter-spacing: .12em; text-transform: uppercase;
+      color: var(--muted); margin: 11px 0 5px; }
+    select, button {
+      width: 100%; background: #12141c; color: var(--ink); border: 1px solid var(--line);
+      border-radius: 8px; padding: 8px 10px; font: inherit; font-size: .86rem;
+    }
+    .row { display: flex; gap: 8px; margin-top: 10px; }
+    .row button { cursor: pointer; }
+    .row button:hover { border-color: var(--accent); color: var(--accent); }
+    .legend { display: flex; flex-wrap: wrap; gap: 8px 14px; margin-top: 12px; font-size: .75rem; color: var(--muted); }
+    .swatch { width: 9px; height: 9px; border-radius: 50%; display: inline-block; margin-right: 5px; vertical-align: middle; }
+    .otherworld {
+      margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--line);
+      font-size: .8rem; color: var(--muted); line-height: 1.5;
+    }
+    .otherworld strong { color: var(--accent); font-weight: 600; }
+    .count { color: var(--accent); font-variant-numeric: tabular-nums; }
+    .leaflet-popup-content-wrapper {
+      background: #1a1d27; color: var(--ink); border-radius: 12px;
+      border: 1px solid var(--line); box-shadow: 0 10px 28px rgba(0,0,0,.45);
+    }
+    .leaflet-popup-tip { background: #1a1d27; }
+    .leaflet-popup-content { margin: 13px 15px; font-size: .9rem; line-height: 1.45; }
+    .popup-kicker { font-size: .68rem; letter-spacing: .04em; color: var(--accent); margin: 0 0 5px; }
+    .popup-title { font-size: 1.08rem; margin: 0 0 2px; }
+    .popup-ja { color: var(--muted); font-size: .8rem; margin: 0 0 8px; }
+    .popup-note { color: #d8d0c2; margin: 0; }
+    .leaflet-control-attribution { background: rgba(16,18,24,.75) !important; color: #6e675c !important; }
+    .leaflet-control-attribution a { color: #8e8576 !important; }
+    @media (max-width: 640px) {
+      .panel { top: auto; bottom: 10px; left: 10px; right: 10px; width: auto; max-height: 46vh; }
+    }
+  </style>
+</head>
+<body>
+  <div id="map"></div>
+  <aside class="panel">
+    <nav class="atlas">
+      <a href="murakami-map.html">Murakami</a>
+      <a href="tokyo-literary-map.html">Tokyo</a>
+      <a href="barcelona-literary-map.html">Barcelona</a>
+      <a class="here" href="europe-literary-map.html">Europe</a>
+    </nav>
+    <h1>Europe Literary Map</h1>
+    <p class="sub"><span class="count" id="count"></span> places from Nabokov, Cortazar, and Hesse. Filter by book or author. Invented cities stay off the pins.</p>
+    <label for="work">Book</label>
+    <select id="work"></select>
+    <label for="author">Author</label>
+    <select id="author"></select>
+    <label for="reality">How real</label>
+    <select id="reality">
+      <option value="all">All mappable places</option>
+      <option value="real">Named real places</option>
+      <option value="inspired_by">Inspired by a real town</option>
+      <option value="neighborhood_only">Neighborhood / schematic</option>
+      <option value="memory">Memory, war, or story-only</option>
+    </select>
+    <div class="row">
+      <button type="button" id="west">West</button>
+      <button type="button" id="alps">Alps</button>
+      <button type="button" id="europe">Europe</button>
+    </div>
+    <div class="legend">
+      <span><i class="swatch" style="background:#d4b483"></i>real</span>
+      <span><i class="swatch" style="background:#7eb8a8"></i>inspired by</span>
+      <span><i class="swatch" style="background:#8aa0c4"></i>neighborhood</span>
+      <span><i class="swatch" style="background:#c4898a"></i>memory</span>
+    </div>
+    <div class="otherworld">
+      <strong>Unmapped on purpose.</strong> Siddhartha’s India; Pale Fire’s New Wye; 62’s composite city; Castalia; the Journey to the East. A coordinate would be a lie.
+    </div>
+  </aside>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script>
+    const PLACES = [
+      {name:"St Petersburg", ja:"St Petersburg, Russia", works:["Speak, Memory"], year:1951, reality:"memory", lat:59.9343, lng:30.3351, note:"Nabokov’s birth city. The memoir’s first rooms are here, before the family leaves Russia."},
+      {name:"Vyra", ja:"Rozhdestveno, near St Petersburg", works:["Speak, Memory"], year:1951, reality:"real", lat:59.3180, lng:30.1250, note:"The country estate of the memoir. A real house; the childhood is a story told from elsewhere."},
+      {name:"Trinity College, Cambridge", ja:"Cambridge, England", works:["Speak, Memory","Glory"], year:1932, reality:"real", lat:52.2069, lng:0.1169, note:"Nabokov read French and Russian here. Glory’s Martin Edelweiss is a Cambridge student who will not stay."},
+      {name:"Berlin", ja:"Charlottenburg, Berlin", works:["The Gift","The Defense","King, Queen, Knave"], year:1938, reality:"real", lat:52.5044, lng:13.3050, note:"The émigré years. Chess, boarding houses, and the Russian Berlin of The Gift."},
+      {name:"Prague", ja:"Prague, Czechia", works:["Speak, Memory"], year:1951, reality:"memory", lat:50.0755, lng:14.4378, note:"Nabokov’s mother lived here in exile. A stop on the memoir’s map, not a novel-length city."},
+      {name:"Paris", ja:"Paris, France", works:["The Real Life of Sebastian Knight"], year:1941, reality:"real", lat:48.8566, lng:2.3522, note:"Last European city before the Atlantic. Sebastian Knight’s narrator hunts a life through these streets."},
+      {name:"Menton", ja:"Menton, French Riviera", works:["The Real Life of Sebastian Knight"], year:1941, reality:"real", lat:43.7745, lng:7.5040, note:"Winter light on the coast. Nabokov drafted here while Europe closed."},
+      {name:"Montreux Palace", ja:"Montreux, Switzerland", works:["Ada","Transparent Things"], year:1969, reality:"real", lat:46.4312, lng:6.9114, note:"The hotel of the last decades. Ada’s Switzerland and Transparent Things’ quiet rooms share this shore of the lake."},
+      {name:"Lake Geneva", ja:"Lake Geneva, Switzerland", works:["Transparent Things"], year:1972, reality:"neighborhood_only", lat:46.4310, lng:6.8500, note:"The lake as a pane of glass. A schematic more than a single jetty."},
+      {name:"Brussels", ja:"Brussels, Belgium", works:["Hopscotch"], year:1963, reality:"memory", lat:50.8503, lng:4.3517, note:"Cortazar was born here. The novels are Paris and Buenos Aires; Brussels is the first European room."},
+      {name:"Saint-Germain-des-Pres", ja:"Left Bank, Paris", works:["Hopscotch"], year:1963, reality:"real", lat:48.8539, lng:2.3338, note:"Oliveira’s Paris. Cafes, jazz, and the hopscotch of Rayuela on the Left Bank."},
+      {name:"Pont des Arts", ja:"Pont des Arts, Paris", works:["Hopscotch"], year:1963, reality:"real", lat:48.8583, lng:2.3375, note:"The footbridge over the Seine. A meeting place in Hopscotch, still a public walk."},
+      {name:"Latin Quarter", ja:"Latin Quarter, Paris", works:["Hopscotch","The Pursuer"], year:1963, reality:"neighborhood_only", lat:48.8503, lng:2.3456, note:"Student streets and jazz cellars. The Pursuer’s Johnny is a Paris night more than a doorbell."},
+      {name:"Place du General Beuret", ja:"15th arrondissement, Paris", works:["Hopscotch"], year:1963, reality:"real", lat:48.8433, lng:2.2985, note:"Cortazar lived on this square. A real Paris address behind the invented walks."},
+      {name:"Saignon", ja:"Saignon, Provence", works:["Around the Day in Eighty Worlds"], year:1971, reality:"real", lat:43.8610, lng:5.4280, note:"The Provençal village of the later years. A house above Apt, not a tourist Paris."},
+      {name:"Calw", ja:"Calw, Black Forest", works:["Beneath the Wheel"], year:1906, reality:"real", lat:48.7150, lng:8.7400, note:"Hesse’s birthplace. The small Swabian town behind the school novels."},
+      {name:"Maulbronn Abbey", ja:"Maulbronn, Baden-Wurttemberg", works:["Beneath the Wheel","Narcissus and Goldmund"], year:1906, reality:"inspired_by", lat:49.0010, lng:8.8130, note:"The monastery school Hesse attended. Beneath the Wheel and the medieval pair both look at these cloisters."},
+      {name:"Basel", ja:"Basel, Switzerland", works:["Peter Camenzind","Steppenwolf"], year:1904, reality:"real", lat:47.5596, lng:7.5886, note:"Family city and a candidate for Steppenwolf’s unnamed town. Hesse lived and published here."},
+      {name:"Gaienhofen", ja:"Gaienhofen, Lake Constance", works:["Peter Camenzind"], year:1904, reality:"real", lat:47.7160, lng:8.9830, note:"The first independent house, on the German shore of the lake."},
+      {name:"Bern", ja:"Bern, Switzerland", works:["Rosshalde"], year:1914, reality:"real", lat:46.9480, lng:7.4474, note:"The years before Montagnola. Rosshalde’s painter is a man leaving a house like this."},
+      {name:"Montagnola", ja:"Montagnola, Ticino", works:["Siddhartha","Steppenwolf","The Glass Bead Game"], year:1922, reality:"real", lat:45.9830, lng:8.9130, note:"Hesse’s house from 1919. Siddhartha, Steppenwolf, and The Glass Bead Game were written on this hill. India and Castalia are not this hill."},
+      {name:"Zurich", ja:"Zurich, Switzerland", works:["Steppenwolf"], year:1927, reality:"neighborhood_only", lat:47.3769, lng:8.5417, note:"Readers put Harry Haller’s city on Basel or Zurich. The Magic Theatre is not a street number."},
+      {name:"Baden", ja:"Baden, Aargau", works:["The Glass Bead Game"], year:1943, reality:"real", lat:47.4730, lng:8.3060, note:"The spa Hesse used. A real Swiss town beside an invented pedagogical province."}
+    ];
+
+    const WORK_AUTHORS = {
+      "Speak, Memory": "Vladimir Nabokov",
+      "Glory": "Vladimir Nabokov",
+      "The Gift": "Vladimir Nabokov",
+      "The Defense": "Vladimir Nabokov",
+      "King, Queen, Knave": "Vladimir Nabokov",
+      "The Real Life of Sebastian Knight": "Vladimir Nabokov",
+      "Ada": "Vladimir Nabokov",
+      "Transparent Things": "Vladimir Nabokov",
+      "Hopscotch": "Julio Cortazar",
+      "The Pursuer": "Julio Cortazar",
+      "Around the Day in Eighty Worlds": "Julio Cortazar",
+      "Beneath the Wheel": "Hermann Hesse",
+      "Narcissus and Goldmund": "Hermann Hesse",
+      "Peter Camenzind": "Hermann Hesse",
+      "Steppenwolf": "Hermann Hesse",
+      "Siddhartha": "Hermann Hesse",
+      "The Glass Bead Game": "Hermann Hesse",
+      "Rosshalde": "Hermann Hesse"
+    };
+
+    const COLORS = {
+      real: "#d4b483",
+      inspired_by: "#7eb8a8",
+      neighborhood_only: "#8aa0c4",
+      memory: "#c4898a"
+    };
+
+    function authorsOf(p) {
+      return [...new Set(p.works.map(function (w) { return WORK_AUTHORS[w] || w; }))];
+    }
+
+    const map = L.map("map", { zoomControl: true, minZoom: 2 }).setView([48.5, 8.5], 4);
+    L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png", {
+      attribution: "&copy; OpenStreetMap &copy; CARTO",
+      subdomains: "abcd",
+      maxZoom: 19
+    }).addTo(map);
+
+    const allWorks = [...new Set(PLACES.flatMap(p => p.works))].sort();
+    const workSelect = document.getElementById("work");
+    workSelect.innerHTML = '<option value="all">All books in this atlas</option>' +
+      allWorks.map(w => '<option value="' + w.replace(/"/g, "&quot;") + '">' + w + "</option>").join("");
+
+    const allAuthors = [...new Set(PLACES.flatMap(authorsOf))].sort();
+    const authorSelect = document.getElementById("author");
+    authorSelect.innerHTML = '<option value="all">All authors in this atlas</option>' +
+      allAuthors.map(a => '<option value="' + a.replace(/"/g, "&quot;") + '">' + a + "</option>").join("");
+
+    const layer = L.layerGroup().addTo(map);
+
+    function render() {
+      layer.clearLayers();
+      const work = workSelect.value;
+      const author = authorSelect.value;
+      const reality = document.getElementById("reality").value;
+      const shown = PLACES.filter(p => {
+        if (work !== "all" && p.works.indexOf(work) === -1) return false;
+        if (author !== "all" && authorsOf(p).indexOf(author) === -1) return false;
+        if (reality !== "all" && p.reality !== reality) return false;
+        return true;
+      });
+      document.getElementById("count").textContent = shown.length;
+      shown.forEach(p => {
+        const m = L.circleMarker([p.lat, p.lng], {
+          radius: 8,
+          color: "#0b0c10",
+          weight: 1,
+          fillColor: COLORS[p.reality] || "#d4b483",
+          fillOpacity: 0.95
+        });
+        m.bindPopup(
+          '<p class="popup-kicker">' + p.works.join(" · ") + "</p>" +
+          '<p class="popup-title">' + p.name + "</p>" +
+          '<p class="popup-ja">' + authorsOf(p).join(" · ") + " · " + p.ja + " · " + p.reality.replace(/_/g, " ") + "</p>" +
+          '<p class="popup-note">' + p.note + "</p>"
+        );
+        m.addTo(layer);
+      });
+    }
+
+    workSelect.addEventListener("change", render);
+    authorSelect.addEventListener("change", render);
+    document.getElementById("reality").addEventListener("change", render);
+    document.getElementById("west").onclick = function () { map.setView([49.5, 8.0], 5); };
+    document.getElementById("alps").onclick = function () { map.setView([46.6, 8.2], 7); };
+    document.getElementById("europe").onclick = function () { map.fitBounds([[43.7, -0.2], [60.0, 31.0]]); };
+    render();
+  </script>
+</body>
+</html>
