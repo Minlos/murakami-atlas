@@ -168,7 +168,7 @@
       return [...new Set(p.works.map(function (w) { return WORK_AUTHORS[w] || w; }))];
     }
 
-    const map = L.map("map", { zoomControl: true, minZoom: 2 }).setView([48.5, 8.5], 4);
+    const map = L.map("map", { zoomControl: true, minZoom: 2 }).setView([48.2, 6.5], 6);
     L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png", {
       attribution: "&copy; OpenStreetMap &copy; CARTO",
       subdomains: "abcd",
@@ -220,7 +220,7 @@
     workSelect.addEventListener("change", render);
     authorSelect.addEventListener("change", render);
     document.getElementById("reality").addEventListener("change", render);
-    document.getElementById("west").onclick = function () { map.setView([49.5, 8.0], 5); };
+    document.getElementById("west").onclick = function () { map.setView([48.2, 6.5], 6); };
     document.getElementById("alps").onclick = function () { map.setView([46.6, 8.2], 7); };
     document.getElementById("europe").onclick = function () { map.fitBounds([[43.7, -0.2], [60.0, 31.0]]); };
     render();
