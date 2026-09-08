@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Mishima Atlas — an interactive map of places in the novels</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <style>
+    :root {
+      --ink: #efe6d6;
+      --muted: #9b917f;
+      --paper: #101218;
+      --panel: rgba(22, 25, 34, .92);
+      --line: #323848;
+      --accent: #d4b07a;
+    }
+    * { box-sizing: border-box; }
+    html, body { height: 100%; margin: 0; background: var(--paper); color: var(--ink);
+      font-family: Georgia, "Iowan Old Style", Palatino, serif; }
+    #map { position: absolute; inset: 0; }
+    .leaflet-container { background: #101218; font-family: inherit; }
+    .leaflet-tile-pane { filter: invert(1) hue-rotate(180deg) brightness(.92) contrast(.88) saturate(.3); }
+    .panel {
+      position: absolute; z-index: 500; top: 14px; left: 14px;
+      width: min(380px, calc(100vw - 28px));
+      background: var(--panel); backdrop-filter: blur(12px);
+      border: 1px solid var(--line); border-radius: 16px;
+      padding: 18px 18px 14px; box-shadow: 0 18px 50px rgba(0,0,0,.5);
+      max-height: calc(100vh - 28px); overflow: auto;
+    }
+    h1 { font-size: 1.28rem; font-weight: 600; margin: 0 2px 2px; letter-spacing: .01em; }
+    .atlas {
+      display: flex; flex-wrap: wrap; gap: 10px 14px;
+      margin: 0 2px 12px; font-size: .68rem; letter-spacing: .14em;
+      text-transform: uppercase;
+    }
+    .atlas a { color: var(--muted); text-decoration: none; }
+    .atlas a:hover, .atlas a.here { color: var(--accent); }
+    .sub { color: var(--muted); font-size: .8rem; line-height: 1.5; margin: 0 0 14px; }
+    label { display: block; font-size: .68rem; letter-spacing: .12em; text-transform: uppercase;
+      color: var(--muted); margin: 11px 0 5px; }
+    select, button {
+      width: 100%; background: #12141c; color: var(--ink); border: 1px solid var(--line);
+      border-radius: 8px; padding: 8px 10px; font: inherit; font-size: .86rem;
+    }
+    .row { display: flex; gap: 8px; margin-top: 10px; }
+    .row button { cursor: pointer; }
+    .row button:hover { border-color: var(--accent); color: var(--accent); }
+    .legend { display: flex; flex-wrap: wrap; gap: 8px 14px; margin-top: 12px; font-size: .75rem; color: var(--muted); }
+    .swatch { width: 9px; height: 9px; border-radius: 50%; display: inline-block; margin-right: 5px; vertical-align: middle; }
+    .otherworld {
+      margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--line);
+      font-size: .8rem; color: var(--muted); line-height: 1.5;
+    }
+    .otherworld strong { color: var(--accent); font-weight: 600; }
+    .count { color: var(--accent); font-variant-numeric: tabular-nums; }
+    .leaflet-popup-content-wrapper {
+      background: #1a1d27; color: var(--ink); border-radius: 12px;
+      border: 1px solid var(--line); box-shadow: 0 10px 28px rgba(0,0,0,.45);
+    }
+    .leaflet-popup-tip { background: #1a1d27; }
+    .leaflet-popup-content { margin: 13px 15px; font-size: .9rem; line-height: 1.45; }
+    .popup-kicker { font-size: .68rem; letter-spacing: .04em; color: var(--accent); margin: 0 0 5px; }
+    .popup-title { font-size: 1.08rem; margin: 0 0 2px; }
+    .popup-ja { color: var(--muted); font-size: .8rem; margin: 0 0 8px; }
+    .popup-note { color: #d8d0c2; margin: 0; }
+    .leaflet-control-attribution { background: rgba(16,18,24,.75) !important; color: #6e675c !important; }
+    .leaflet-control-attribution a { color: #8e8576 !important; }
+    @media (max-width: 640px) {
+      .panel { top: auto; bottom: 10px; left: 10px; right: 10px; width: auto; max-height: 46vh; }
+    }
+  </style>
+</head>
+<body>
+  <div id="map"></div>
+  <aside class="panel">
+    <nav class="atlas">
+      <a href="murakami-map.html">Murakami</a>
+      <a class="here" href="mishima-map.html">Mishima</a>
+      <a href="tokyo-literary-map.html">Tokyo</a>
+      <a href="barcelona-literary-map.html">Barcelona</a>
+      <a href="europe-literary-map.html">Europe</a>
+    </nav>
+    <h1>Mishima Atlas</h1>
+    <p class="sub"><span class="count" id="count"></span> places from the novels. Filter by book. Gesshuji as a building, and the Matsugae interiors, stay off the pins on purpose.</p>
+    <label for="work">Book</label>
+    <select id="work"></select>
+    <label for="reality">How real</label>
+    <select id="reality">
+      <option value="all">All mappable places</option>
+      <option value="real">Named real places</option>
+      <option value="inspired_by">Inspired by a real town</option>
+      <option value="neighborhood_only">Neighborhood / schematic</option>
+      <option value="memory">Memory, war, or story-only</option>
+    </select>
+    <div class="row">
+      <button type="button" id="tokyo">Tokyo</button>
+      <button type="button" id="japan">Japan</button>
+      <button type="button" id="world">World</button>
+    </div>
+    <div class="legend">
+      <span><i class="swatch" style="background:#d4b483"></i>real</span>
+      <span><i class="swatch" style="background:#7eb8a8"></i>inspired by</span>
+      <span><i class="swatch" style="background:#8aa0c4"></i>neighborhood</span>
+      <span><i class="swatch" style="background:#c4898a"></i>memory</span>
+    </div>
+    <div class="otherworld">
+      <strong>Unmapped on purpose.</strong> Gesshuji as a door; the Matsugae rooms; Honda’s reincarnation; the Golden Pavilion as it stood the night it burned. A coordinate would be a lie.
+    </div>
+  </aside>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script>
+    const PLACES = [
+      {name:"Yotsuya", ja:"四谷 / Yotsuya, Shinjuku ward", works:["Confessions of a Mask","Spring Snow"], year:1949, reality:"real", lat:35.6861, lng:139.7304, note:"Born here. Later the aristocratic slope of Spring Snow — Honda and Kiyoaki’s Tokyo."},
+      {name:"Magome", ja:"馬込 / Magome, Ota ward", works:["Confessions of a Mask"], year:1949, reality:"neighborhood_only", lat:35.5958, lng:139.7115, note:"Childhood west, and later the baroque house. The house is gone; the slope remains."},
+      {name:"Gakushuin, Mejiro", ja:"学習院 / Gakushuin, Mejiro", works:["Confessions of a Mask","Spring Snow"], year:1949, reality:"real", lat:35.7106, lng:139.7094, note:"The Peers’ School. Mishima’s own classrooms, and Kiyoaki’s."},
+      {name:"Hongo / University of Tokyo", ja:"本郷 / Hongo, Bunkyo ward", works:["Confessions of a Mask"], year:1949, reality:"real", lat:35.7128, lng:139.7620, note:"Law faculty. The mask learns a public language here."},
+      {name:"Ginza", ja:"銀座 / Ginza, Chuo ward", works:["Forbidden Colors","After the Banquet"], year:1951, reality:"real", lat:35.6717, lng:139.7649, note:"Display-window Tokyo. Yuichi’s night and the banquet city’s boulevard."},
+      {name:"Asakusa", ja:"浅草 / Asakusa, Taito ward", works:["Forbidden Colors"], year:1951, reality:"neighborhood_only", lat:35.7148, lng:139.7967, note:"The older demimonde east of Ginza. A mood more than a single door."},
+      {name:"Hibiya", ja:"日比谷 / Hibiya, Chiyoda ward", works:["After the Banquet"], year:1960, reality:"real", lat:35.6736, lng:139.7564, note:"Park, hotel, and the political dinner. Kazu’s Tokyo of speeches and gardens."},
+      {name:"Ichigaya", ja:"市谷 / Ichigaya, Shinjuku ward", works:["Patriotism","Runaway Horses"], year:1961, reality:"real", lat:35.6938, lng:139.7310, note:"The military district. The lieutenant’s rooms, Isao’s Tokyo, and Mishima’s last morning share this address."},
+      {name:"Ogikubo", ja:"荻窪 / Ogikubo, Suginami ward", works:["Life for Sale"], year:1968, reality:"real", lat:35.70464, lng:139.62000, note:"The Inoue house. Hanio lives with the widow and her son on the Chuo line."},
+      {name:"Shinjuku", ja:"新宿 / Shinjuku ward", works:["Life for Sale"], year:1968, reality:"real", lat:35.69092, lng:139.70026, note:"Hanio’s flyers and photograph circulate here. The city’s west gate, not the Ogikubo rooms."},
+      {name:"Umegaoka", ja:"梅丘 / Umegaoka, Setagaya ward", works:["Life for Sale"], year:1968, reality:"real", lat:35.6563, lng:139.6538, note:"Reiko’s house. Hanio takes rooms in the Setagaya hinterland after Ogikubo."},
+      {name:"Kami-shima (as Uta-jima)", ja:"神島 / Kami-shima, Toba, Mie", works:["The Sound of Waves"], year:1954, reality:"inspired_by", lat:34.5330, lng:136.9830, note:"Uta-jima is invented. Mishima walked this island twice in 1953; the lighthouse and Yatsushiro shrine are still there."},
+      {name:"Kinkaku-ji", ja:"金閣寺 / Kinkaku-ji, Kyoto", works:["The Temple of the Golden Pavilion"], year:1956, reality:"real", lat:35.03937, lng:135.72924, note:"The pavilion Mizoguchi burns. The hall you visit is the rebuild; the site is the same."},
+      {name:"Maizuru coast", ja:"舞鶴 / Maizuru, Kyoto prefecture", works:["The Temple of the Golden Pavilion"], year:1956, reality:"inspired_by", lat:35.4747, lng:135.3880, note:"Mizoguchi’s poor natal temple on the Japan Sea. A cape more than a door."},
+      {name:"Yokohama / Yamate", ja:"横浜山手 / Yamate, Yokohama", works:["The Sailor Who Fell from Grace with the Sea"], year:1963, reality:"real", lat:35.4375, lng:139.6510, note:"The bluff above the harbor. Noboru’s binoculars, Ryuji’s ship."},
+      {name:"Okaya", ja:"岡谷 / Okaya, Nagano", works:["Silk and Insight"], year:1964, reality:"inspired_by", lat:36.0669, lng:138.0495, note:"The silk-mill town. Komazawa’s factory is a device; Okaya is the industry it names."},
+      {name:"Ise Jingu", ja:"伊勢神宮 / Ise Grand Shrine, Mie", works:["Runaway Horses"], year:1969, reality:"real", lat:34.4550, lng:136.7256, note:"Isao’s shrine. The inner precinct is real; the conspiracy is the novel’s."},
+      {name:"Kumano Hongu", ja:"熊野本宮 / Kumano Hongu Taisha, Wakayama", works:["Runaway Horses"], year:1969, reality:"real", lat:33.8397, lng:135.7736, note:"The southern shrines on Isao’s sacred circuit."},
+      {name:"Osaka", ja:"大阪 / Osaka", works:["Runaway Horses"], year:1969, reality:"real", lat:34.6937, lng:135.5023, note:"Honda as a judge. The law’s city, against Isao’s Ise."},
+      {name:"Kumamoto", ja:"熊本 / Kumamoto", works:["Runaway Horses"], year:1969, reality:"memory", lat:32.8031, lng:130.7079, note:"The Shinpūren of 1876. Isao reads that rising; the streets are history, not his plot."},
+      {name:"Gotemba / Fuji", ja:"御殿場 / Gotemba, Shizuoka", works:["The Temple of Dawn"], year:1970, reality:"real", lat:35.3086, lng:138.9348, note:"Honda’s villa under Fuji. Ying Chan, the pool, the mountain."},
+      {name:"Omiwa / Miwa", ja:"大神神社 / Ōmiwa Shrine, Sakurai, Nara", works:["The Decay of the Angel"], year:1971, reality:"real", lat:34.52897, lng:135.86255, note:"The Miwa of Tōru’s last chapters. The mountain is the shrine; there is no inner hall."},
+      {name:"Kamakura", ja:"鎌倉 / Kamakura", works:["Spring Snow"], year:1969, reality:"neighborhood_only", lat:35.3192, lng:139.5467, note:"Seaside chapters of the aristocratic year. A villa climate more than a named house."},
+      {name:"Bangkok / Wat Arun", ja:"วัดอรุณ / Wat Arun, Bangkok", works:["The Temple of Dawn"], year:1970, reality:"real", lat:13.7437, lng:100.4889, note:"Honda in wartime Bangkok. The dawn temple is named; the reincarnation is his."},
+      {name:"Varanasi", ja:"वाराणसी / Varanasi", works:["The Temple of Dawn"], year:1970, reality:"real", lat:25.3176, lng:83.0059, note:"The Ganges chapters. Honda watches the ghats and thinks he understands transmigration."},
+      {name:"Calcutta", ja:"কলকাতা / Kolkata", works:["The Temple of Dawn"], year:1970, reality:"real", lat:22.5726, lng:88.3639, note:"The Indian transit. A named city Honda passes through, not a pilgrimage stop."},
+      {name:"Paris", ja:"Paris", works:["Madame de Sade"], year:1965, reality:"memory", lat:48.8566, lng:2.3522, note:"The play’s eighteenth-century rooms. Not Mishima’s Paris of 1952."}
+    ];
+
+    const COLORS = {
+      real: "#d4b483",
+      inspired_by: "#7eb8a8",
+      neighborhood_only: "#8aa0c4",
+      memory: "#c4898a"
+    };
+
+    const map = L.map("map", { zoomControl: true, minZoom: 2 }).setView([35.68, 139.70], 11);
+    L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}", {
+      attribution: "Tiles &copy; Esri",
+      maxZoom: 19
+    }).addTo(map);
+
+    const allWorks = [...new Set(PLACES.flatMap(p => p.works))].sort();
+    const workSelect = document.getElementById("work");
+    workSelect.innerHTML = '<option value="all">All books in this atlas</option>' +
+      allWorks.map(w => '<option value="' + w.replace(/"/g, "&quot;") + '">' + w + "</option>").join("");
+
+    const layer = L.layerGroup().addTo(map);
+
+    function render() {
+      layer.clearLayers();
+      const work = workSelect.value;
+      const reality = document.getElementById("reality").value;
+      const shown = PLACES.filter(p => {
+        if (work !== "all" && p.works.indexOf(work) === -1) return false;
+        if (reality !== "all" && p.reality !== reality) return false;
+        return true;
+      });
+      document.getElementById("count").textContent = shown.length;
+      shown.forEach(p => {
+        const m = L.circleMarker([p.lat, p.lng], {
+          radius: 8,
+          color: "#0b0c10",
+          weight: 1,
+          fillColor: COLORS[p.reality] || "#d4b483",
+          fillOpacity: 0.95
+        });
+        m.bindPopup(
+          '<p class="popup-kicker">' + p.works.join(" · ") + "</p>" +
+          '<p class="popup-title">' + p.name + "</p>" +
+          '<p class="popup-ja">' + p.ja + " · " + p.reality.replace(/_/g, " ") + "</p>" +
+          '<p class="popup-note">' + p.note + "</p>"
+        );
+        m.addTo(layer);
+      });
+    }
+
+    workSelect.addEventListener("change", render);
+    document.getElementById("reality").addEventListener("change", render);
+    document.getElementById("tokyo").onclick = function () { map.setView([35.68, 139.70], 12); };
+    document.getElementById("japan").onclick = function () { map.fitBounds([[31.0, 129.4], [45.6, 145.9]]); };
+    document.getElementById("world").onclick = function () { map.setView([28, 80], 3); };
+    render();
+  </script>
+</body>
+</html>
